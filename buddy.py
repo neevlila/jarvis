@@ -1435,7 +1435,8 @@ def console_stream_api():
                                 active_process.kill()
                             except Exception:
                                 pass
-                        yield f"data: {json.dumps({'type': 'stderr', 'text': '\\n[Process terminated: Inactive for 60 seconds.]'})}\n\n"
+                        timeout_msg = json.dumps({'type': 'stderr', 'text': '\n[Process terminated: Inactive for 60 seconds.]'})
+                        yield f"data: {timeout_msg}\n\n"
                         yield f"data: {json.dumps({'type': 'exit', 'exit_code': -1})}\n\n"
                 break
                 
