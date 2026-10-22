@@ -153,20 +153,22 @@ api_token = secrets.token_hex(16)
 
 @app.before_request
 def verify_security_token():
-    # Exclude index page serving, CORS preflight pre-checks, favicon, health check and static assets
+    # Only enforce security token verification on /api/ endpoints
+    if not request.path.startswith('/api/'):
+        return
     if request.method == 'OPTIONS':
         return
-    if request.path in ['/', '/index.html', '/favicon.ico', '/favicon.svg', '/health', '/ready', '/metrics'] or request.path.startswith('/static/'):
-        return
     
-    # Verify samesite Strict cookie
+    # Verify cookie or header authorization
     token = request.cookies.get('jarvis_token')
-    if not token or token != api_token:
-        # Fallback to header authorization
-        header_token = request.headers.get('X-JARVIS-Auth')
-        if header_token == api_token:
-            return
-        return jsonify({'error': 'Unauthorized: Access Denied. Invalid or missing security token.'}), 401
+    if token and token == api_token:
+        return
+
+    header_token = request.headers.get('X-JARVIS-Auth')
+    if header_token and header_token == api_token:
+        return
+
+    return jsonify({'error': 'Unauthorized: Access Denied. Invalid or missing security token.'}), 401
 
 # Real-time interactive subprocess console globals
 active_process = None
@@ -210,7 +212,7 @@ _cpu_thread.start()
 @app.route('/')
 def index():
     resp = app.send_static_file('index.html')
-    resp.set_cookie('jarvis_token', api_token, httponly=True, samesite='Strict')
+    resp.set_cookie('jarvis_token', api_token, httponly=False, samesite='Lax')
     return resp
 
 @app.route('/favicon.ico')
