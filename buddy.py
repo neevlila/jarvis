@@ -4405,7 +4405,6 @@ if __name__ == "__main__":
     _port = int(_main_os.environ.get("PORT", 5000))
     # Boot assistant in background so Flask can start immediately
     import threading as _threading
-    global assistant_ref
     def _start():
         global assistant_ref
         assistant_ref = JarvisAssistant()
