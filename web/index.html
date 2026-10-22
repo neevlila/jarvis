@@ -99,7 +99,7 @@
         <!-- Main Workspace -->
         <main class="main-content">
             <!-- View 1: Dashboard -->
-            <div id="view-dashboard" style="display: grid; grid-template-rows: 1fr auto; gap: 16px; height: 100%;">
+            <div id="view-dashboard" style="display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; overflow: hidden;">
                 <!-- Center Visualization: J.A.R.V.I.S. Global Intelligence Globe -->
                 <section class="hologram-sector" id="global-intelligence-sector">
                     <div class="globe-header-bar">
@@ -166,7 +166,7 @@
                 </section>
 
                 <!-- Quick Action Grid -->
-                <section class="actions-sector">
+                <section class="actions-sector" style="flex-shrink: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <h2>CORE AUTOMATION MODULES</h2>
                         <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--accent-color); letter-spacing: 1px;">AUTONOMOUS AGENTS READY</span>

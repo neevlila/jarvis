@@ -237,12 +237,17 @@ def get_status():
         ram = psutil.virtual_memory().percent
         
         drives = []
+        seen_devices = set()
         for partition in psutil.disk_partitions():
             try:
-                if partition.mountpoint:
+                dev = partition.device.replace('\\', '').strip()
+                if not dev:
+                    dev = partition.mountpoint.strip()
+                if partition.mountpoint and dev and dev not in seen_devices:
+                    seen_devices.add(dev)
                     usage = psutil.disk_usage(partition.mountpoint)
                     drives.append({
-                        'device': partition.device.replace('\\', ''),
+                        'device': dev,
                         'percent': usage.percent
                     })
             except Exception:
