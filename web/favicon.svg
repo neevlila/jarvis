@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+        <radialGradient id="jarvisCoreGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="60%" stop-color="#00d2ff"/>
+            <stop offset="100%" stop-color="#0055ff"/>
+        </radialGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+    </defs>
+    <!-- Background Circle for crisp tab rendering -->
+    <circle cx="50" cy="50" r="48" fill="#040608"/>
+    <!-- Outer Hexagon Frame -->
+    <polygon points="50,10 85,30 85,70 50,90 15,70 15,30" fill="none" stroke="#00d2ff" stroke-width="3" opacity="0.6"/>
+    <!-- Outer Arc Reactor Ring -->
+    <circle cx="50" cy="50" r="32" fill="none" stroke="#00d2ff" stroke-width="3" stroke-dasharray="10 6" filter="url(#glow)"/>
+    <!-- Inner High-Energy Ring -->
+    <circle cx="50" cy="50" r="20" fill="none" stroke="#00ffcc" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <!-- Central Power Core -->
+    <circle cx="50" cy="50" r="10" fill="url(#jarvisCoreGlow)" filter="url(#glow)"/>
+</svg>

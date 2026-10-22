@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" type="image/png" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="maplibre-gl.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="glow-bg-secondary"></div>
+    
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation & System Stats -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 200 200" width="46" height="46" class="brand-reactor" id="brand-arc-reactor">
+                        <!-- Outer guide ring -->
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="#005f73" stroke-width="2"/>
+                        <!-- Outer rotating segmented blocks -->
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="#00d2ff" stroke-width="8" stroke-dasharray="10, 20" class="rotate-clockwise"/>
+                        
+                        <!-- Middle counter-rotating segments -->
+                        <circle cx="100" cy="100" r="60" fill="none" stroke="#0a9396" stroke-width="3" stroke-dasharray="35, 10" class="rotate-counter"/>
+                        <circle cx="100" cy="100" r="50" fill="none" stroke="#e9d8a6" stroke-width="1.5" stroke-dasharray="2, 6"/>
+
+                        <!-- Inner core ring -->
+                        <circle cx="100" cy="100" r="30" fill="none" stroke="#94d2bd" stroke-width="4" stroke-dasharray="4, 1"/>
+                        <!-- Glowing Center Core -->
+                        <circle cx="100" cy="100" r="16" fill="#00d2ff" class="core-glow"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>J.A.R.V.I.S.</h1>
+                    <p>SYSTEM ACCESS v1.1</p>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" id="btn-dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    Dashboard
+                </button>
+                <button class="nav-item" id="btn-code-assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                    Code Assistant
+                </button>
+                <button class="nav-item" id="btn-idea-engine">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                    Idea Engine
+                </button>
+                <button class="nav-item" id="btn-intelligence">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+                    Intelligence Hub
+                </button>
+
+            </nav>
+
+            <div class="system-stats">
+                <h3>SYSTEM RESOURCE</h3>
+                
+                <div class="stat-item">
+                    <div class="stat-label">
+                        <span>CPU UTILIZATION</span>
+                        <span id="cpu-value">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="cpu-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-label">
+                        <span>RAM ALLOCATION</span>
+                        <span id="ram-value">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ram-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Drives Container -->
+                <div id="drives-container" style="display: flex; flex-direction: column; gap: 18px;">
+                </div>
+                
+                <button id="btn-diagnostics" style="margin-top: 20px; width: 100%; font-size: 0.7rem; letter-spacing: 1.5px; border-radius: 6px; padding: 10px; background: rgba(0, 210, 255, 0.08); border: 1px dashed var(--accent-color); color: var(--accent-color); font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; outline: none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-activity"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    RUN DIAGNOSTICS
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- View 1: Dashboard -->
+            <div id="view-dashboard" style="display: grid; grid-template-rows: 1fr auto; gap: 16px; height: 100%;">
+                <!-- Center Visualization: J.A.R.V.I.S. Global Intelligence Globe -->
+                <section class="hologram-sector" id="global-intelligence-sector">
+                    <div class="globe-header-bar">
+                        <div class="globe-title-group">
+                            <span class="globe-title-main">GLOBAL INTELLIGENCE RECON</span>
+                            <span class="globe-title-sub">REAL-TIME SPHERICAL GEOLOCATION SYSTEM</span>
+                        </div>
+                        <div class="status-indicator" id="globe-status-badge">GLOBAL POSITIONING SYSTEM // ONLINE</div>
+                    </div>
+
+                    <div class="globe-display-container">
+                        <!-- Hybrid 3D Monochrome Earth & Mapcn Tactical Viewport -->
+                        <div id="globe-viewport-3d" class="globe-viewport" role="region" aria-label="3D Earth Global Intelligence Map">
+                            <div id="globe-3d-canvas-wrap" class="globe-canvas-wrap"></div>
+                            <div id="globe-mapcn-map-wrap" class="globe-mapcn-wrap"></div>
+                        </div>
+
+                        <!-- Technical Information HUD Overlay / Side Panel -->
+                        <div id="globe-hud-panel" class="globe-hud-overlay idle" role="status" aria-live="polite">
+                            <div class="hud-header">
+                                <div class="hud-tag">
+                                    <span class="hud-pulse-dot"></span>
+                                    <span id="globe-hud-tag-text">TARGET RECONNAISSANCE</span>
+                                </div>
+                                <button id="globe-reset-target-btn" class="hud-reset-btn" title="Reset Camera & Clear Target" aria-label="Reset target">
+                                    CLEAR TARGET &times;
+                                </button>
+                            </div>
+
+                            <div class="hud-primary-content">
+                                <div class="hud-ip-badge">
+                                    <span class="hud-label">TARGET IP</span>
+                                    <span id="globe-hud-ip" class="hud-ip-value">---</span>
+                                </div>
+
+                                <div class="hud-location-group">
+                                    <div id="globe-hud-city" class="hud-city-text"></div>
+                                    <div id="globe-hud-country" class="hud-country-text"></div>
+                                </div>
+
+                                <div class="hud-coords-box">
+                                    <span class="hud-label">COORDINATES</span>
+                                    <span id="globe-hud-coords" class="hud-coords-val"></span>
+                                </div>
+
+                                <div class="hud-details-grid">
+                                    <div class="hud-detail-item" id="globe-hud-isp-row" style="display: none;">
+                                        <span class="hud-label">ROUTING / ISP</span>
+                                        <span id="globe-hud-isp" class="hud-detail-val"></span>
+                                    </div>
+                                    <div class="hud-detail-item" id="globe-hud-tz-row" style="display: none;">
+                                        <span class="hud-label">TIMEZONE</span>
+                                        <span id="globe-hud-tz" class="hud-detail-val"></span>
+                                    </div>
+                                </div>
+
+                                <div class="hud-disclaimer">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    <span>ESTIMATED / APPROXIMATE IP LOCATION</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Quick Action Grid -->
+                <section class="actions-sector">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <h2>CORE AUTOMATION MODULES</h2>
+                        <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--accent-color); letter-spacing: 1px;">AUTONOMOUS AGENTS READY</span>
+                    </div>
+                    <div class="action-grid">
+                        <div class="action-card" id="btn-qr">
+                            <div class="card-glow"></div>
+                            <div class="card-top-row">
+                                <div class="action-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="7" y1="7" x2="7" y2="7"/><line x1="17" y1="7" x2="17" y2="7"/><line x1="7" y1="17" x2="7" y2="17"/></svg>
+                                </div>
+                                <span class="card-mod-tag">MOD-01</span>
+                            </div>
+                            <div class="card-text-group">
+                                <h3>QR Code Utility</h3>
+                                <p>Generate ultra-high-speed custom styled QR matrices</p>
+                            </div>
+                            <button class="action-launch-btn" id="launch-qr-btn">
+                                <span>Open Generator</span>
+                                <span class="btn-arrow">&rarr;</span>
+                            </button>
+                        </div>
+
+                        <div class="action-card" id="btn-ppt">
+                            <div class="card-glow"></div>
+                            <div class="card-top-row">
+                                <div class="action-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+                                </div>
+                                <span class="card-mod-tag">MOD-02</span>
+                            </div>
+                            <div class="card-text-group">
+                                <h3>PowerPoint Creator</h3>
+                                <p>Automated outline &amp; multi-slide deck builder</p>
+                            </div>
+                            <button class="action-launch-btn" id="launch-ppt-btn">
+                                <span>Launch Builder</span>
+                                <span class="btn-arrow">&rarr;</span>
+                            </button>
+                        </div>
+
+                        <div class="action-card" id="btn-email-assistant">
+                            <div class="card-glow"></div>
+                            <div class="card-top-row">
+                                <div class="action-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                </div>
+                                <span class="card-mod-tag">MOD-03</span>
+                            </div>
+                            <div class="card-text-group">
+                                <h3>Email Assistant</h3>
+                                <p>Draft &amp; transmit context-aware executive emails</p>
+                            </div>
+                            <button class="action-launch-btn" id="launch-email-btn">
+                                <span>Open Assistant</span>
+                                <span class="btn-arrow">&rarr;</span>
+                            </button>
+                        </div>
+
+                        <div class="action-card" id="btn-card-seo">
+                            <div class="card-glow"></div>
+                            <div class="card-top-row">
+                                <div class="action-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>
+                                </div>
+                                <span class="card-mod-tag">MOD-04</span>
+                            </div>
+                            <div class="card-text-group">
+                                <h3>SEO Scoring</h3>
+                                <p>Deep technical SEO audit &amp; explainable score engine</p>
+                            </div>
+                            <button class="action-launch-btn" id="launch-seo-btn">
+                                <span>Analyze Website</span>
+                                <span class="btn-arrow">&rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <!-- View 2: Code Assistant -->
+            <div id="view-code-assistant" style="display: none; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0;">
+                <!-- Chat / Prompt Pane -->
+                <div class="code-assistant-chat" style="display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; min-height: 0;">
+                    <h3 style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-color); letter-spacing: 2px;">CODE INSTRUCTIONS</h3>
+                    
+                    <div id="code-chat-messages" class="console-logs" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; padding-right: 8px;">
+                        <div class="log-line system-log">[SYSTEM] J.A.R.V.I.S. Code Co-Pilot online. Transmit prompts to write script blocks.</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <label for="code-lang-select" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px; flex-shrink: 0;">TARGET LANGUAGE:</label>
+                            <select id="code-lang-select">
+                                <option value="python">Python (.py)</option>
+                                <option value="javascript">JavaScript (.js)</option>
+                                <option value="html">HTML (.html)</option>
+                                <option value="css">CSS (.css)</option>
+                                <option value="cpp">C++ (.cpp)</option>
+                                <option value="java">Java (.java)</option>
+                                <option value="csharp">C# (.cs)</option>
+                                <option value="go">Go (.go)</option>
+                                <option value="typescript">TypeScript (.ts)</option>
+                                <option value="sql">SQL (.sql)</option>
+                                <option value="rust">Rust (.rs)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="code-chat-input" placeholder="Ask J.A.R.V.I.S. to write code..." style="flex-grow: 1; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); font-family: var(--font-sans); font-size: 0.85rem; padding: 10px; border-radius: 6px; outline: none;">
+                            <button id="code-chat-send-btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--accent-color); padding: 8px 16px; font-size: 0.75rem; font-family: var(--font-sans); font-weight: bold; border-radius: 6px; cursor: pointer; transition: all 0.2s;">SEND</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Code Editor Pane -->
+                <div class="code-assistant-editor" style="display: flex; flex-direction: column; background: rgba(8, 12, 18, 0.6); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; min-height: 0; min-width: 0; height: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 2px;">EDITOR VIEWPORT</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="control-btn" id="code-copy-btn" style="width: auto; padding: 6px 14px; font-size: 0.75rem;">COPY CODE</button>
+                            <button class="control-btn btn-secondary" id="code-download-btn" style="width: auto; padding: 6px 14px; font-size: 0.75rem;">DOWNLOAD</button>
+                            <button class="control-btn" id="code-run-btn" style="width: auto; padding: 6px 14px; font-size: 0.75rem; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--accent-color); color: var(--accent-color);">RUN CODE</button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-height: 0; height: 100%;">
+                        <div class="code-editor-container" style="flex-grow: 2; flex-basis: 0; background: rgba(4, 6, 8, 0.9); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 8px; padding: 16px 16px 16px 0; overflow: auto; display: flex; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.5; color: #bde0fe; position: relative; min-width: 0;">
+                            <pre id="code-display" style="margin: 0; white-space: pre; word-wrap: normal; overflow: visible; flex-grow: 1; outline: none; min-width: 0;" contenteditable="true"># Enter instructions on the left to write code...</pre>
+                        </div>
+                        
+                        <div class="code-output-container" style="flex-grow: 1; flex-basis: 0; display: flex; flex-direction: column; background: rgba(2, 4, 6, 0.95); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 8px; padding: 12px; min-height: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0, 210, 255, 0.2); padding-bottom: 4px; margin-bottom: 8px;">
+                                <span style="font-size: 0.65rem; color: var(--accent-color); font-family: var(--font-sans); letter-spacing: 1.5px; font-weight: bold;">CONSOLE OUTPUT</span>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button id="code-debug-ai-btn" style="background: rgba(255, 0, 85, 0.1); border: 1px solid rgba(255, 0, 85, 0.3); color: #ff0055; font-size: 0.6rem; cursor: pointer; font-family: var(--font-sans); letter-spacing: 1px; outline: none; padding: 2px 8px; border-radius: 3px; display: none; transition: all 0.2s;">DEBUG WITH AI</button>
+                                    <button id="code-clear-console-btn" style="background: transparent; border: none; color: var(--text-secondary); font-size: 0.6rem; cursor: pointer; font-family: var(--font-sans); letter-spacing: 1px; outline: none;">CLEAR</button>
+                                </div>
+                            </div>
+                            
+
+                            
+                            <div id="code-console-output" style="flex-grow: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 0.8rem; color: #e0e0e0; white-space: pre-wrap; word-break: break-all; padding: 4px;">Console idle. Click Run Code to execute.</div>
+                            
+                            <!-- Console AI Input Bar -->
+                            <div style="display: flex; align-items: center; background: rgba(0, 15, 25, 0.5); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 6px; padding: 4px 10px; margin-top: 8px; gap: 8px; flex-shrink: 0;">
+                                <span id="code-console-ai-prefix" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-color); font-weight: bold; user-select: none; letter-spacing: 1px;">AI &gt;</span>
+                                <input type="text" id="code-console-ai-input" placeholder="Ask J.A.R.V.I.S. to explain, fix, or optimize..." style="flex-grow: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: var(--font-mono); font-size: 0.75rem; padding: 6px 0;">
+                                <button id="code-console-ai-send-btn" style="background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.3); color: var(--accent-color); padding: 4px 12px; font-size: 0.65rem; font-family: var(--font-sans); font-weight: bold; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; outline: none;">ASK</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 3: Idea Engine -->
+            <div id="view-idea-engine" style="display: none; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0;">
+                <!-- Left Input Panel -->
+                <div class="idea-engine-form" style="display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; min-height: 0; overflow-y: auto; gap: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <h3 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 2px; margin: 0;">IDEA ENGINE</h3>
+                        <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--success-color); background: rgba(0, 255, 204, 0.1); padding: 2px 6px; border-radius: 4px;">ARCHITECT AI</span>
+                    </div>
+
+                    <!-- Generation Mode -->
+                    <div>
+                        <label for="idea-mode-select" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">GENERATION MODE</label>
+                        <select id="idea-mode-select" style="width: 100%; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; outline: none; font-family: var(--font-sans); font-size: 0.8rem;">
+                            <option value="stack_to_ideas">Mode A: Stack &rarr; Ranked Ideas</option>
+                            <option value="problem_to_stack">Mode B: Problem &rarr; Stack &amp; Ideas</option>
+                            <option value="stack_and_problem">Mode C: Stack + Problem &rarr; Blueprint</option>
+                            <option value="project_improvements">Mode D: Improve Existing Project</option>
+                        </select>
+                    </div>
+
+                    <!-- Tech Stack Input -->
+                    <div id="idea-tech-group">
+                        <label style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TECHNOLOGY STACK</label>
+                        <div id="idea-tech-tags" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 32px; padding: 6px; background: rgba(0, 15, 25, 0.4); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <!-- Dynamic Tag Pills -->
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="idea-tech-input" placeholder="Type tech &amp; press Enter (e.g. Python, React)" style="flex-grow: 1; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; outline: none;">
+                            <button id="idea-add-tech-btn" style="background: rgba(0, 210, 255, 0.15); border: 1px solid var(--border-color); color: var(--accent-color); padding: 0 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">+ ADD</button>
+                        </div>
+                        <!-- Quick Suggestions -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+                            <span class="tech-chip-quick" data-tech="Python">+ Python</span>
+                            <span class="tech-chip-quick" data-tech="FastAPI">+ FastAPI</span>
+                            <span class="tech-chip-quick" data-tech="React">+ React</span>
+                            <span class="tech-chip-quick" data-tech="Supabase">+ Supabase</span>
+                            <span class="tech-chip-quick" data-tech="Gemini API">+ Gemini API</span>
+                            <span class="tech-chip-quick" data-tech="Docker">+ Docker</span>
+                            <span class="tech-chip-quick" data-tech="OpenCV">+ OpenCV</span>
+                        </div>
+                    </div>
+
+                    <!-- Specific Problem Input (Dynamic) -->
+                    <div id="idea-problem-group" style="display: none;">
+                        <label for="idea-problem-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TARGET PROBLEM STATEMENT</label>
+                        <textarea id="idea-problem-input" placeholder="Describe the specific problem to solve, e.g. Food waste in college dining halls..." style="width: 100%; height: 70px; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 6px; outline: none; font-size: 0.75rem; resize: none;"></textarea>
+                    </div>
+
+                    <!-- Constraints Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label for="idea-exp-select" style="font-size: 0.65rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">EXPERIENCE</label>
+                            <select id="idea-exp-select" style="width: 100%; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 6px; outline: none; font-size: 0.75rem;">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate" selected>Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                                <option value="Expert">Expert</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="idea-type-select" style="font-size: 0.65rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">PROJECT TYPE</label>
+                            <select id="idea-type-select" style="width: 100%; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 6px; outline: none; font-size: 0.75rem;">
+                                <option value="Portfolio Project" selected>Portfolio Project</option>
+                                <option value="College Project">College Project</option>
+                                <option value="Startup / Product">Startup / Product</option>
+                                <option value="Research Project">Research Project</option>
+                                <option value="Hackathon">Hackathon</option>
+                                <option value="Open Source">Open Source</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="idea-domain-select" style="font-size: 0.65rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">DOMAIN</label>
+                            <select id="idea-domain-select" style="width: 100%; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 6px; outline: none; font-size: 0.75rem;">
+                                <option value="Open-ended" selected>Open-ended</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Cybersecurity">Cybersecurity</option>
+                                <option value="Developer Tools">Developer Tools</option>
+                                <option value="FinTech">FinTech</option>
+                                <option value="Agriculture">Agriculture</option>
+                                <option value="Education">Education</option>
+                                <option value="Accessibility">Accessibility</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="idea-time-select" style="font-size: 0.65rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">TIME FRAME</label>
+                            <select id="idea-time-select" style="width: 100%; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 6px; outline: none; font-size: 0.75rem;">
+                                <option value="2 days">2 Days</option>
+                                <option value="1 week">1 Week</option>
+                                <option value="2 weeks" selected>2 Weeks</option>
+                                <option value="1 month">1 Month</option>
+                                <option value="3 months">3 Months</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="control-btn" id="idea-generate-btn" style="margin-top: 6px; padding: 12px; font-weight: bold; letter-spacing: 1px;">
+                        ANALYZE STACK &amp; GENERATE
+                    </button>
+
+                    <!-- Quick Architecture Presets -->
+                    <div style="border-top: 1px solid rgba(0, 210, 255, 0.1); padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 1px; font-weight: bold;">STACK PRESETS</span>
+                            <span style="font-size: 0.6rem; color: var(--text-muted); font-family: var(--font-mono);">1-CLICK LOAD</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <button type="button" class="tech-preset-btn" data-preset="ai-fullstack" style="background: rgba(0, 20, 30, 0.5); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 6px; padding: 6px 8px; text-align: left; cursor: pointer; transition: all 0.2s;">
+                                <div style="font-size: 0.7rem; color: var(--accent-color); font-weight: bold;">AI Fullstack</div>
+                                <div style="font-size: 0.6rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">FastAPI • Gemini • Supabase</div>
+                            </button>
+                            <button type="button" class="tech-preset-btn" data-preset="vision-ai" style="background: rgba(0, 20, 30, 0.5); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 6px; padding: 6px 8px; text-align: left; cursor: pointer; transition: all 0.2s;">
+                                <div style="font-size: 0.7rem; color: var(--accent-color); font-weight: bold;">Computer Vision</div>
+                                <div style="font-size: 0.6rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">OpenCV • PyTorch • Python</div>
+                            </button>
+                            <button type="button" class="tech-preset-btn" data-preset="cloud-devops" style="background: rgba(0, 20, 30, 0.5); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 6px; padding: 6px 8px; text-align: left; cursor: pointer; transition: all 0.2s;">
+                                <div style="font-size: 0.7rem; color: var(--accent-color); font-weight: bold;">Cloud &amp; DevOps</div>
+                                <div style="font-size: 0.6rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Docker • K8s • Go • Terraform</div>
+                            </button>
+                            <button type="button" class="tech-preset-btn" data-preset="modern-web" style="background: rgba(0, 20, 30, 0.5); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 6px; padding: 6px 8px; text-align: left; cursor: pointer; transition: all 0.2s;">
+                                <div style="font-size: 0.7rem; color: var(--accent-color); font-weight: bold;">Modern Web</div>
+                                <div style="font-size: 0.6rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">React • TypeScript • Tailwind</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Evaluation Matrix & Telemetry Status -->
+                    <div style="background: rgba(0, 15, 25, 0.4); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.65rem; color: var(--accent-color); font-family: var(--font-mono); font-weight: bold; letter-spacing: 0.5px;">EVALUATION MATRIX</span>
+                            <span style="font-size: 0.6rem; color: var(--success-color); font-family: var(--font-mono); display: flex; align-items: center; gap: 4px;">
+                                <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success-color); animation: core-pulsate 1.5s infinite;"></span>
+                                READY
+                            </span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.65rem; font-family: var(--font-mono); color: var(--text-secondary);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 20, 30, 0.4); padding: 4px 6px; border-radius: 4px;">
+                                <span>Feasibility</span>
+                                <span style="color: var(--accent-color);">25%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 20, 30, 0.4); padding: 4px 6px; border-radius: 4px;">
+                                <span>Innovation</span>
+                                <span style="color: var(--accent-color);">25%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 20, 30, 0.4); padding: 4px 6px; border-radius: 4px;">
+                                <span>Resume Impact</span>
+                                <span style="color: var(--accent-color);">25%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0, 20, 30, 0.4); padding: 4px 6px; border-radius: 4px;">
+                                <span>Market Value</span>
+                                <span style="color: var(--accent-color);">25%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Results Panel -->
+                <div class="idea-engine-results" style="display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; min-height: 0; overflow-y: auto;">
+                    <!-- Results Header & Stack Analysis Bar -->
+                    <div id="idea-analysis-banner" style="display: none; background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">STACK CAPABILITY ANALYSIS</span>
+                            <span id="idea-synergies-count" style="font-size: 0.7rem; color: var(--text-secondary);">0 Synergies Identified</span>
+                        </div>
+                        <div id="idea-synergies-list" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: #cfe8ff;">
+                        </div>
+                    </div>
+
+                    <!-- Placeholder / Empty State -->
+                    <div id="idea-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary); gap: 12px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(0, 210, 255, 0.3)" stroke-width="1.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                        <p style="font-size: 0.85rem; max-width: 380px; line-height: 1.5;">Enter your available technologies on the left to analyze cross-stack relationships and generate ranked project blueprints.</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="idea-loading-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px;">
+                        <div class="spinner" style="width: 40px; height: 40px; border: 3px solid rgba(0, 210, 255, 0.2); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <span id="idea-loading-txt" style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--accent-color); letter-spacing: 1px;">EVALUATING STACK CAPABILITIES &amp; FEASIBILITY...</span>
+                    </div>
+
+                    <!-- Ranked Cards Grid -->
+                    <div id="idea-cards-grid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                        <!-- Dynamic Project Cards -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 4: Intelligence Hub -->
+            <div id="view-intelligence" style="display: none; flex-direction: column; height: 100%; min-height: 0; gap: 16px;">
+                <!-- Intelligence Header & Sub-nav Tabs -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="font-size: 0.85rem; color: var(--accent-color); letter-spacing: 2px; margin: 0;">INTELLIGENCE HUB</h3>
+                        <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--success-color); background: rgba(0, 255, 204, 0.1); padding: 2px 6px; border-radius: 4px;">AUTONOMOUS COGNITION</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;" id="intel-subnav">
+                        <button class="intel-tab-btn active" data-tab="project">PROJECT ANALYZER</button>
+                        <button class="intel-tab-btn" data-tab="goal">GOAL ENGINE</button>
+                        <button class="intel-tab-btn" data-tab="memory">MEMORY INSPECTOR</button>
+                        <button class="intel-tab-btn" data-tab="skills">SKILLS REGISTRY</button>
+                        <button class="intel-tab-btn" data-tab="performance">PERFORMANCE HUD</button>
+                    </div>
+                </div>
+
+                <!-- Sub-tab Content Area -->
+                <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;">
+                    <!-- 1. Project Analyzer Tab -->
+                    <div id="intel-panel-project" class="intel-panel" style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; gap: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; align-items: center;">
+                            <input type="text" id="project-scan-path" placeholder="Local project directory path (default: current workspace)" value="." style="flex: 1; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.8rem; font-family: var(--font-mono);">
+                            <button class="control-btn" id="btn-scan-project" style="padding: 10px 20px; font-weight: bold; letter-spacing: 1px;">INSPECT HEALTH</button>
+                        </div>
+
+                        <div id="project-report-container" style="display: none; flex-direction: column; gap: 16px;">
+                            <!-- Scores Overview -->
+                            <div style="display: grid; grid-template-columns: 200px 1fr; gap: 16px;">
+                                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <div style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px;">OVERALL HEALTH</div>
+                                    <div id="project-overall-score" style="font-size: 2.8rem; font-weight: 800; color: var(--accent-color); font-family: var(--font-mono); margin: 6px 0;">--</div>
+                                    <span id="project-overall-tier" style="font-size: 0.65rem; font-family: var(--font-mono); padding: 2px 8px; border-radius: 4px; background: rgba(0,210,255,0.1); color: var(--accent-color);">READY</span>
+                                </div>
+                                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;" id="project-subscores-grid">
+                                    <!-- Dynamic subscores -->
+                                </div>
+                            </div>
+
+                            <!-- Languages & Frameworks -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 10px 0;">LANGUAGES &amp; CODEBASE METRICS</h4>
+                                    <div id="project-languages-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                                </div>
+                                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 10px 0;">FRAMEWORKS &amp; DETECTED LIBRARIES</h4>
+                                    <div id="project-frameworks-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Findings Table -->
+                            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                                <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 10px 0;">EVIDENCE-BASED CODE FINDINGS</h4>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); background: rgba(0, 210, 255, 0.04);">
+                                                <th style="padding: 8px 10px;">Severity</th>
+                                                <th style="padding: 8px 10px;">Category</th>
+                                                <th style="padding: 8px 10px;">Location</th>
+                                                <th style="padding: 8px 10px;">Problem &amp; Evidence</th>
+                                                <th style="padding: 8px 10px;">Recommendation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="project-findings-tbody">
+                                            <!-- Dynamic Findings -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Goal Decomposition Tab -->
+                    <div id="intel-panel-goal" class="intel-panel" style="display: none; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; gap: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <label style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary);">HIGH-LEVEL ENGINEERING OBJECTIVE</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="goal-input" placeholder="e.g. Build an autonomous real-time threat intelligence pipeline with FastAPI and Kafka" style="flex: 1; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                                <button class="control-btn" id="btn-decompose-goal" style="padding: 10px 20px; font-weight: bold; letter-spacing: 1px;">DECOMPOSE OBJECTIVE</button>
+                            </div>
+                        </div>
+
+                        <div id="goal-plan-container" style="display: none; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 210, 255, 0.05); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 8px; padding: 10px 16px;">
+                                <span id="goal-plan-title" style="font-size: 0.8rem; font-weight: bold; color: var(--accent-color);">PLANNING GRAPH</span>
+                                <span id="goal-plan-count" style="font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-secondary);">0 Tasks</span>
+                            </div>
+                            <div id="goal-tasks-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Dynamic Task DAG Nodes -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Memory Inspector Tab -->
+                    <div id="intel-panel-memory" class="intel-panel" style="display: none; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px;">
+                            <input type="text" id="memory-search-input" placeholder="Search knowledge records..." style="flex: 1; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                            <div style="display: flex; gap: 6px;" id="memory-type-filters">
+                                <button class="mem-filter-btn active" data-type="all">ALL</button>
+                                <button class="mem-filter-btn" data-type="project">PROJECT</button>
+                                <button class="mem-filter-btn" data-type="semantic">SEMANTIC</button>
+                                <button class="mem-filter-btn" data-type="task">TASK</button>
+                                <button class="mem-filter-btn" data-type="preference">PREFERENCE</button>
+                            </div>
+                        </div>
+
+                        <div id="memory-entries-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;">
+                            <!-- Dynamic Memory Cards -->
+                        </div>
+                    </div>
+
+                    <!-- 4. Skills Registry Tab -->
+                    <div id="intel-panel-skills" class="intel-panel" style="display: none; flex-direction: column; gap: 16px;">
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <h4 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 12px 0;">REGISTERED CAPABILITIES &amp; PERMISSION BOUNDARIES</h4>
+                            <div id="skills-registry-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                                <!-- Dynamic Skill Cards -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Performance HUD Tab -->
+                    <div id="intel-panel-performance" class="intel-panel" style="display: none; flex-direction: column; gap: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;" id="perf-gauges-grid">
+                            <!-- Telemetry gauges -->
+                        </div>
+
+                        <div id="perf-anomalies-box" style="background: rgba(255, 170, 0, 0.05); border: 1px solid rgba(255, 170, 0, 0.2); border-radius: 10px; padding: 14px; display: none;">
+                            <h4 style="font-size: 0.75rem; color: #ffaa00; margin: 0 0 6px 0; letter-spacing: 1px;">PERFORMANCE ALERTS &amp; ANOMALIES</h4>
+                            <ul id="perf-anomalies-list" style="margin: 0; padding-left: 16px; font-size: 0.75rem; color: var(--text-primary);"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </main>
+
+        <!-- Right Panels (Weather & News) -->
+        <aside class="right-panel">
+            <!-- Weather Widget -->
+            <div class="panel-widget weather-widget">
+                <div class="widget-header">
+                    <h3>ATMOSPHERIC REPORT</h3>
+                    <span id="weather-city">LONDON</span>
+                </div>
+                <div class="weather-search-bar" style="display: flex; gap: 8px; margin-bottom: 14px;">
+                    <input type="text" id="weather-search-input" placeholder="Search city..." style="flex-grow: 1; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; outline: none; border-color: rgba(0, 210, 255, 0.15); font-family: var(--font-sans);">
+                    <button id="weather-search-btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--accent-color); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; font-family: var(--font-sans); font-weight: bold;">GO</button>
+                </div>
+                <div class="weather-info-grid">
+                    <div class="temp-display">
+                        <span id="weather-temp">15°C</span>
+                        <p id="weather-desc">PARTLY CLOUDY</p>
+                    </div>
+                    <div class="weather-stats">
+                        <div class="w-stat">
+                            <span>HUMIDITY</span>
+                            <span id="weather-humidity">70%</span>
+                        </div>
+                        <div class="w-stat">
+                            <span>WIND SPEED</span>
+                            <span id="weather-wind">4.5 m/s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Widget -->
+            <div class="panel-widget news-widget">
+                <div class="widget-header" style="margin-bottom: 12px;">
+                    <h3>GLOBAL INTELLIGENCE</h3>
+                    <select id="news-category-select">
+                        <option value="general">GENERAL</option>
+                        <option value="ai">AI</option>
+                        <option value="sports">SPORTS</option>
+                        <option value="politics">POLITICS</option>
+                        <option value="technology">TECH</option>
+                        <option value="business">BUSINESS</option>
+                    </select>
+                </div>
+                <div class="news-list" id="news-feed-list">
+                    <div class="news-item-loading">Retrieving latest news headlines...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Bottom Input & Console Logs -->
+    <footer class="console-footer">
+        <div class="console-logs" id="console-logs">
+            <div class="log-line system-log">[SYSTEM] J.A.R.V.I.S Mainframe online. Core systems initialized.</div>
+            <div class="log-line assistant-log">[J.A.R.V.I.S] Good Afternoon sir! How may I assist you today?</div>
+        </div>
+        <div class="console-input-bar">
+            <span class="prompt">></span>
+            <input type="text" id="command-input" placeholder="Transmit instruction code to JARVIS..." autocomplete="off">
+            <button id="btn-mic" class="mic-btn" title="Voice Input">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </button>
+            <button id="btn-send">TRANSMIT</button>
+        </div>
+    </footer>
+
+    <!-- Modal Overlay for QR Generator -->
+    <div class="modal-overlay" id="qr-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>QR CODE GENERATOR</h3>
+                <button class="modal-close-btn" id="qr-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="qr-input-group">
+                    <p>Enter URL, text, or phone number to encode:</p>
+                    <input type="text" id="qr-text-input" placeholder="https://example.com..." autocomplete="off">
+                    <button class="control-btn" id="qr-generate-btn">GENERATE QR CODE</button>
+                </div>
+                <div id="qr-result-group" style="display: none;">
+                    <div class="qr-preview-container">
+                        <img id="qr-img-preview" src="" alt="QR Code Preview">
+                    </div>
+                    <p class="qr-saved-path" id="qr-saved-path"></p>
+                    <div class="modal-actions">
+                        <button class="control-btn" id="qr-download-btn">DOWNLOAD</button>
+                        <button class="control-btn btn-secondary" id="qr-reset-btn">GENERATE ANOTHER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for PPT Generator -->
+    <div class="modal-overlay" id="ppt-modal">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>POWERPOINT CREATOR</h3>
+                <button class="modal-close-btn" id="ppt-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="ppt-input-group" style="display: flex; flex-direction: column; gap: 14px;">
+                    <p>Configure parameters for outline-based slide deck creation:</p>
+                    <div>
+                        <label for="ppt-topic-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">TOPIC</label>
+                        <input type="text" id="ppt-topic-input" placeholder="e.g. History of Quantum Computing..." autocomplete="off" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <div style="flex: 1;">
+                            <label for="ppt-slides-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">SLIDE COUNT</label>
+                            <input type="number" id="ppt-slides-input" value="6" min="2" max="15" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="ppt-theme-select" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">SLIDE THEME</label>
+                            <select id="ppt-theme-select" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; font-family: var(--font-sans);">
+                                <option value="cyberpunk">Cyberpunk Cyan</option>
+                                <option value="emerald">Emerald Matrix</option>
+                                <option value="amber">Retro Amber</option>
+                                <option value="violet">Sunset Violet</option>
+                                <option value="crimson">Vibrant Crimson</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                        <input type="checkbox" id="ppt-custom-titles" style="cursor: pointer; width: 14px; height: 14px; accent-color: var(--accent-color);">
+                        <label for="ppt-custom-titles" style="font-size: 0.8rem; color: var(--text-secondary); cursor: pointer; user-select: none;">Define custom slide titles</label>
+                    </div>
+                    
+                    <div id="ppt-titles-inputs" style="display: none; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 6px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                        <!-- Dynamic Title Inputs go here -->
+                    </div>
+                    
+                    <button class="control-btn" id="ppt-generate-btn" style="margin-top: 8px;">GENERATE PRESENTATION</button>
+                </div>
+                
+                <div id="ppt-result-group" style="display: none; flex-direction: column; gap: 14px; text-align: center; align-items: center; padding: 10px 0;">
+                    <div style="width: 50px; height: 50px; border-radius: 50%; background: rgba(0, 255, 204, 0.1); border: 2px solid var(--success-color); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h3 style="color: var(--success-color); letter-spacing: 1px;">SLIDES BUILT SUCCESSFULLY</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); word-break: break-all; line-height: 1.4;" id="ppt-saved-path">Saved locally to: C:\Users\hp\...</p>
+                    <div class="modal-actions" style="width: 100%; margin-top: 6px;">
+                        <button class="control-btn" id="ppt-open-btn">OPEN PPT FILE</button>
+                        <button class="control-btn btn-secondary" id="ppt-reset-btn">GENERATE ANOTHER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for News Details -->
+    <div class="modal-overlay" id="news-modal">
+        <div class="modal-card" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="news-modal-source">NEWS ARTICLE</h3>
+                <button class="modal-close-btn" id="news-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body" style="gap: 12px;">
+                <h2 id="news-modal-title" style="font-size: 1.1rem; line-height: 1.4; color: var(--accent-color);">Headline</h2>
+                <span id="news-modal-date" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary);">Date</span>
+                <p id="news-modal-desc" style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.5; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);"></p>
+                <div class="modal-actions" style="margin-top: 10px;">
+                    <a id="news-modal-url" href="#" target="_blank" class="control-btn" style="text-align: center; text-decoration: none; display: block; width: 100%;">READ FULL STORY</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for Email Assistant -->
+    <div class="modal-overlay" id="email-modal">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>EMAIL ASSISTANT</h3>
+                <button class="modal-close-btn" id="email-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <!-- Form Inputs Container -->
+                <div id="email-form-inputs" style="display: flex; flex-direction: column; gap: 14px;">
+
+                    <div>
+                        <label for="email-to-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">RECIPIENT EMAIL (TO)</label>
+                        <input type="email" id="email-to-input" placeholder="recipient@example.com" autocomplete="off" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <label for="email-role-select" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">RECIPIENT ROLE</label>
+                            <select id="email-role-select" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; font-family: var(--font-sans);">
+                                <option value="HOD">HOD</option>
+                                <option value="HR">HR</option>
+                                <option value="Professor">Professor</option>
+                                <option value="Boss">Boss</option>
+                                <option value="Custom">Custom / Other</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; display: none;" id="email-custom-role-container">
+                            <label for="email-custom-role-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">CUSTOM ROLE</label>
+                            <input type="text" id="email-custom-role-input" placeholder="e.g. Hiring Manager" autocomplete="off" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="email-format-select" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">EMAIL FORMAT</label>
+                        <select id="email-format-select" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; font-family: var(--font-sans);">
+                            <option value="Formal">Formal</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Informal">Informal</option>
+                            <option value="Casual">Casual</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <div style="flex: 1;">
+                            <label for="email-sender-name" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">YOUR NAME</label>
+                            <input type="text" id="email-sender-name" placeholder="Your Name" autocomplete="off" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="email-sender-dept" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">YOUR POSITION / DEPT</label>
+                            <input type="text" id="email-sender-dept" placeholder="Your Position / Department" autocomplete="off" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <div style="flex: 1;">
+                            <label for="email-start-date" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">START DATE (IF LEAVE)</label>
+                            <input type="date" id="email-start-date" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; color-scheme: dark; font-family: var(--font-sans);">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="email-end-date" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">END DATE (IF LEAVE)</label>
+                            <input type="date" id="email-end-date" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; color-scheme: dark; font-family: var(--font-sans);">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="email-about-input" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-secondary); display: block; margin-bottom: 4px;">WHAT IS THIS EMAIL ABOUT?</label>
+                        <textarea id="email-about-input" placeholder="Describe the purpose, e.g. request a meeting next Monday at 2 PM..." style="width: 100%; height: 80px; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; font-family: var(--font-sans); resize: none;"></textarea>
+                    </div>
+                    
+                    <button class="control-btn" id="email-generate-btn">GENERATE EMAIL DRAFT</button>
+                </div>
+                
+                <!-- Email Output Panel -->
+                <div id="email-output-group" style="display: none; flex-direction: column; gap: 14px;">
+                    <div>
+                        <label for="email-subject-output" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--success-color); display: block; margin-bottom: 4px;">DRAFT SUBJECT</label>
+                        <input type="text" id="email-subject-output" style="width: 100%; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 6px; outline: none; font-weight: bold;">
+                    </div>
+                    <div>
+                        <label for="email-body-output" style="font-size: 0.7rem; letter-spacing: 1px; color: var(--success-color); display: block; margin-bottom: 4px;">DRAFT BODY (EDITABLE)</label>
+                        <textarea id="email-body-output" style="width: 100%; height: 220px; background: rgba(4, 6, 8, 0.9); border: 1px solid rgba(0, 210, 255, 0.1); color: #bde0fe; padding: 10px; border-radius: 6px; outline: none; font-family: var(--font-mono); font-size: 0.8rem; resize: none;"></textarea>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 6px;">
+                        <button class="control-btn" id="email-copy-btn" style="flex: 1;">COPY EMAIL</button>
+                        <button class="control-btn btn-secondary" id="email-regenerate-btn" style="flex: 1;">GENERATE AGAIN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for Idea Details Deep Dive -->
+    <div class="modal-overlay" id="idea-details-modal">
+        <div class="modal-card" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 id="idea-modal-title" style="margin: 0;">PROJECT BLUEPRINT</h3>
+                    <span id="idea-modal-tier-badge" style="font-size: 0.65rem; font-family: var(--font-mono); padding: 2px 8px; border-radius: 4px; background: rgba(0, 210, 255, 0.2); color: var(--accent-color);">EXCEPTIONAL</span>
+                </div>
+                <button class="modal-close-btn" id="idea-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 6px;">
+                <!-- Pitch & Overview -->
+                <div style="background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px;">
+                    <p id="idea-modal-pitch" style="font-size: 0.95rem; color: #fff; font-weight: 500; margin: 0 0 6px 0;"></p>
+                    <p id="idea-modal-solution" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin: 0;"></p>
+                </div>
+
+                <!-- Scores Breakdown Grid -->
+                <div>
+                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 8px 0;">SCORE EVALUATION BREAKDOWN</h4>
+                    <div id="idea-modal-scores-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;">
+                        <!-- Dynamic score chips -->
+                    </div>
+                </div>
+
+                <!-- Problem & Target Users -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="background: rgba(0, 15, 25, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                        <h4 style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px; margin: 0 0 6px 0;">PROBLEM STATEMENT</h4>
+                        <p id="idea-modal-problem" style="font-size: 0.8rem; color: var(--text-primary); line-height: 1.4; margin: 0;"></p>
+                    </div>
+                    <div style="background: rgba(0, 15, 25, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                        <h4 style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px; margin: 0 0 6px 0;">TARGET AUDIENCE</h4>
+                        <ul id="idea-modal-users" style="margin: 0; padding-left: 16px; font-size: 0.8rem; color: var(--text-primary); line-height: 1.4;"></ul>
+                    </div>
+                </div>
+
+                <!-- Technology Role Mapping Table -->
+                <div>
+                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 8px 0;">TECHNOLOGY RESPONSIBILITY MAPPING</h4>
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+                            <thead>
+                                <tr style="background: rgba(0, 210, 255, 0.08); color: var(--accent-color); border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 8px 12px;">Technology</th>
+                                    <th style="padding: 8px 12px;">Assigned Role</th>
+                                    <th style="padding: 8px 12px;">Technical Justification</th>
+                                </tr>
+                            </thead>
+                            <tbody id="idea-modal-tech-tbody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Core Features -->
+                <div>
+                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 8px 0;">CORE MVP FEATURES</h4>
+                    <ul id="idea-modal-features" style="margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-primary); line-height: 1.5;"></ul>
+                </div>
+
+                <!-- Architecture & Data Flow -->
+                <div style="background: rgba(0, 15, 25, 0.6); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 8px; padding: 12px;">
+                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 6px 0;">LOGICAL ARCHITECTURE &amp; DATA FLOW</h4>
+                    <p id="idea-modal-arch" style="font-family: var(--font-mono); font-size: 0.75rem; color: #a5d8ff; margin: 0 0 8px 0;"></p>
+                    <div id="idea-modal-dataflow" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: var(--text-secondary);"></div>
+                </div>
+
+                <!-- Roadmap -->
+                <div>
+                    <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1px; margin: 0 0 8px 0;">DEVELOPMENT ROADMAP</h4>
+                    <div id="idea-modal-roadmap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+                        <!-- Dynamic Roadmap Cards -->
+                    </div>
+                </div>
+
+                <!-- Risks & Future Expansion -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="background: rgba(255, 77, 77, 0.05); border: 1px solid rgba(255, 77, 77, 0.2); border-radius: 8px; padding: 12px;">
+                        <h4 style="font-size: 0.7rem; color: #ff6b6b; letter-spacing: 1px; margin: 0 0 6px 0;">RISKS &amp; MITIGATIONS</h4>
+                        <ul id="idea-modal-risks" style="margin: 0; padding-left: 16px; font-size: 0.75rem; color: var(--text-primary); line-height: 1.4;"></ul>
+                    </div>
+                    <div style="background: rgba(0, 255, 204, 0.05); border: 1px solid rgba(0, 255, 204, 0.2); border-radius: 8px; padding: 12px;">
+                        <h4 style="font-size: 0.7rem; color: var(--success-color); letter-spacing: 1px; margin: 0 0 6px 0;">FUTURE EXPANSION</h4>
+                        <ul id="idea-modal-future" style="margin: 0; padding-left: 16px; font-size: 0.75rem; color: var(--text-primary); line-height: 1.4;"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions" style="padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; gap: 8px;">
+                <button class="control-btn" id="btn-open-master-prompt" style="flex: 2; background: linear-gradient(135deg, rgba(0, 210, 255, 0.25), rgba(147, 51, 234, 0.25)); border: 1px solid var(--accent-color); color: #fff; font-weight: bold; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);">
+                    ✨ GENERATE MASTER BUILD PROMPT
+                </button>
+                <button class="control-btn btn-secondary" id="idea-modal-copy-btn" style="flex: 1;">COPY BLUEPRINT</button>
+                <button class="control-btn btn-secondary" id="idea-modal-close-btn" style="flex: 0.8;">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for Master Build Prompt -->
+    <div class="modal-overlay" id="master-prompt-modal">
+        <div class="modal-card" style="max-width: 900px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+            <div class="modal-header" style="padding: 16px 20px; background: rgba(0, 20, 30, 0.6);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                    <div>
+                        <h3 id="prompt-modal-title" style="margin: 0; font-size: 0.95rem; letter-spacing: 1.5px; color: var(--accent-color);">MASTER BUILD PROMPT SPECIFICATION</h3>
+                        <span id="prompt-modal-subtitle" style="font-size: 0.7rem; color: var(--text-secondary); font-family: var(--font-mono);">AI-Readable Project Build Prompt for Coding Agents</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="prompt-modal-close-x">&times;</button>
+            </div>
+
+            <!-- Customization Controls Bar -->
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 20px; background: rgba(0, 10, 20, 0.8); border-bottom: 1px solid var(--border-color); align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label style="font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 0.5px;">VISUAL DIRECTION</label>
+                    <select id="prompt-visual-select" style="font-size: 0.75rem; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 5px 8px; border-radius: 4px; outline: none;">
+                        <option value="Auto (AI-Determined)">Auto (Domain Optimal)</option>
+                        <option value="Premium Minimal">Premium Minimal</option>
+                        <option value="Cinematic">Cinematic</option>
+                        <option value="Futuristic">Futuristic</option>
+                        <option value="Immersive 3D">Immersive 3D</option>
+                        <option value="Editorial">Editorial</option>
+                        <option value="Enterprise">Enterprise</option>
+                        <option value="Data-Driven">Data-Driven</option>
+                        <option value="Glass">Glass</option>
+                        <option value="Neo-Brutalist">Neo-Brutalist</option>
+                        <option value="Creative">Creative</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label style="font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 0.5px;">MOTION LEVEL</label>
+                    <select id="prompt-motion-select" style="font-size: 0.75rem; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 5px 8px; border-radius: 4px; outline: none;">
+                        <option value="Subtle">Subtle</option>
+                        <option value="Balanced" selected>Balanced</option>
+                        <option value="Cinematic">Cinematic</option>
+                        <option value="Experimental">Experimental</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label style="font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 0.5px;">3D INTENSITY</label>
+                    <select id="prompt-3d-select" style="font-size: 0.75rem; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 5px 8px; border-radius: 4px; outline: none;">
+                        <option value="Auto (AI-Determined)" selected>Auto (If Justified)</option>
+                        <option value="None">None (Pure 2D)</option>
+                        <option value="Subtle">Subtle Depth</option>
+                        <option value="Moderate">Moderate (Spline/Canvas)</option>
+                        <option value="Immersive">Immersive (WebGL/Three.js)</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <label style="font-size: 0.6rem; color: var(--text-secondary); letter-spacing: 0.5px;">TARGET AI IDE</label>
+                    <select id="prompt-platform-select" style="font-size: 0.75rem; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 5px 8px; border-radius: 4px; outline: none;">
+                        <option value="Universal" selected>Universal (Standard Markdown)</option>
+                        <option value="Antigravity">Antigravity (Planning Directives)</option>
+                        <option value="Cursor">Cursor (.cursorrules / Composer)</option>
+                        <option value="Claude Code">Claude Code (CLAUDE.md)</option>
+                        <option value="Lovable">Lovable</option>
+                        <option value="v0">v0 by Vercel</option>
+                        <option value="Bolt">Bolt.new</option>
+                    </select>
+                </div>
+
+                <button class="control-btn" id="btn-regenerate-prompt" style="margin-top: 14px; padding: 6px 14px; font-size: 0.7rem; letter-spacing: 1px;">REGENERATE</button>
+            </div>
+
+            <!-- Completeness Gauge Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 20px; background: rgba(0, 210, 255, 0.04); border-bottom: 1px solid var(--border-color); font-size: 0.7rem;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="color: var(--text-secondary); font-family: var(--font-mono);">SPEC COMPLETENESS:</span>
+                    <span id="prompt-score-overall" style="font-weight: bold; color: var(--success-color); font-family: var(--font-mono);">96.5%</span>
+                </div>
+                <div style="display: flex; gap: 12px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted);">
+                    <span>Technical: <strong id="prompt-score-tech" style="color: var(--accent-color);">98%</strong></span>
+                    <span>UX/UI: <strong id="prompt-score-ux" style="color: var(--accent-color);">95%</strong></span>
+                    <span>Visual: <strong id="prompt-score-vis" style="color: var(--accent-color);">97%</strong></span>
+                    <span>Phased Plan: <strong id="prompt-score-impl" style="color: var(--accent-color);">96%</strong></span>
+                </div>
+            </div>
+
+            <!-- Prompt Markdown View Body -->
+            <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px; background: #040608; font-family: var(--font-mono); font-size: 0.75rem; color: #bde0fe; line-height: 1.6; white-space: pre-wrap; user-select: text;" id="prompt-markdown-display">
+                Generating comprehensive 25+ section Master Build Specification...
+            </div>
+
+            <!-- Action Footer -->
+            <div class="modal-actions" style="padding: 12px 20px; background: rgba(0, 20, 30, 0.6); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px;">
+                    <button class="control-btn" id="btn-copy-master-prompt" style="padding: 8px 18px; font-weight: bold; letter-spacing: 0.5px;">
+                        COPY MASTER PROMPT
+                    </button>
+                    <button class="control-btn btn-secondary" id="btn-save-master-prompt" style="padding: 8px 14px;">
+                        SAVE TO MEMORY
+                    </button>
+                </div>
+                <button class="control-btn btn-secondary" id="btn-close-master-prompt" style="padding: 8px 16px;">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay for SEO Intelligence & Scoring Engine -->
+    <div class="modal-overlay" id="seo-modal">
+        <div class="modal-card" style="max-width: 960px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+            <!-- Modal Header -->
+            <div class="modal-header" style="padding: 16px 20px; background: rgba(0, 20, 30, 0.7); border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(0, 210, 255, 0.1); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6M8 11h6"/></svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 0.95rem; letter-spacing: 1.5px; color: var(--accent-color);">J.A.R.V.I.S. SEO INTELLIGENCE ENGINE</h3>
+                        <span style="font-size: 0.65rem; color: var(--text-secondary); font-family: var(--font-mono);">EVIDENCE-GROUNDED TECHNICAL AUDIT &bull; EXPLAINABLE SCORING</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="seo-modal-close-x">&times;</button>
+            </div>
+
+            <!-- Modal Body Area -->
+            <div class="modal-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                <!-- 1. Input Section -->
+                <div id="seo-input-section" style="display: flex; flex-direction: column; gap: 14px; background: rgba(0, 15, 25, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">AUDIT TARGET SPECIFICATION</span>
+                        <!-- Mode Selector Pill -->
+                        <div style="display: flex; gap: 4px; background: rgba(0, 20, 30, 0.8); border: 1px solid var(--border-color); border-radius: 6px; padding: 3px;">
+                            <button id="seo-mode-url-btn" class="mem-filter-btn active" style="padding: 3px 10px; font-size: 0.65rem;">PUBLIC URL</button>
+                            <button id="seo-mode-project-btn" class="mem-filter-btn" style="padding: 3px 10px; font-size: 0.65rem;">LOCAL PROJECT</button>
+                        </div>
+                    </div>
+
+                    <!-- URL / Project Input Row -->
+                    <div id="seo-url-input-group" style="display: flex; flex-direction: column; gap: 6px;">
+                        <label for="seo-url-input" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px;">WEBSITE URL (HTTPS PREFERRED)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="seo-url-input" placeholder="https://example.com" value="https://example.com" style="flex: 1; background: rgba(0, 20, 30, 0.7); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.85rem; font-family: var(--font-mono);">
+                        </div>
+                    </div>
+
+                    <div id="seo-project-input-group" style="display: none; flex-direction: column; gap: 6px;">
+                        <label for="seo-project-path-input" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px;">LOCAL PROJECT DIRECTORY OR FILE PATH</label>
+                        <input type="text" id="seo-project-path-input" placeholder="." value="." style="width: 100%; background: rgba(0, 20, 30, 0.7); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.85rem; font-family: var(--font-mono);">
+                    </div>
+
+                    <!-- Target Keyword & AI Toggle Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: flex-end;">
+                        <div>
+                            <label for="seo-keyword-input" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px; display: block; margin-bottom: 4px;">TARGET FOCUS KEYWORD (OPTIONAL)</label>
+                            <input type="text" id="seo-keyword-input" placeholder="e.g. cloud security, AI assistant" style="width: 100%; background: rgba(0, 20, 30, 0.7); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; outline: none; font-size: 0.8rem;">
+                        </div>
+                        <button class="control-btn" id="seo-analyze-btn" style="padding: 10px 24px; font-weight: bold; letter-spacing: 1px; min-width: 180px;">
+                            ANALYZE WEBSITE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Analyzing / Progress State -->
+                <div id="seo-analyzing-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; gap: 20px; background: rgba(0, 15, 25, 0.4); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div class="spinner" style="width: 44px; height: 44px; border: 3px solid rgba(0, 210, 255, 0.2); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="text-align: center;">
+                        <h4 style="margin: 0 0 6px 0; color: var(--accent-color); font-size: 0.9rem; letter-spacing: 1.5px;">J.A.R.V.I.S. TECHNICAL SEO AUDIT IN PROGRESS</h4>
+                        <p id="seo-progress-current-stage" style="margin: 0; font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono);">Connecting to remote host...</p>
+                    </div>
+                    <!-- Live Stage Checklist -->
+                    <div id="seo-progress-checklist" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 440px; background: rgba(0, 10, 20, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px;">
+                        <div class="seo-stage-item" id="stage-connect"><span class="stage-icon">●</span> Connecting & validating SSRF safety</div>
+                        <div class="seo-stage-item" id="stage-fetch"><span class="stage-icon">○</span> Retrieving HTML document & headers</div>
+                        <div class="seo-stage-item" id="stage-meta"><span class="stage-icon">○</span> Inspecting metadata, title & canonicals</div>
+                        <div class="seo-stage-item" id="stage-headings"><span class="stage-icon">○</span> Analyzing heading structure & content</div>
+                        <div class="seo-stage-item" id="stage-assets"><span class="stage-icon">○</span> Checking images, alt tags & link graph</div>
+                        <div class="seo-stage-item" id="stage-schema"><span class="stage-icon">○</span> Validating Schema.org JSON-LD & social cards</div>
+                        <div class="seo-stage-item" id="stage-score"><span class="stage-icon">○</span> Calculating explainable scores & action plan</div>
+                    </div>
+                </div>
+
+                <!-- 3. Error Alert Box -->
+                <div id="seo-error-box" style="display: none; background: rgba(255, 59, 48, 0.08); border: 1px solid rgba(255, 59, 48, 0.3); border-radius: 10px; padding: 16px; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: var(--error-color); font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        AUDIT ENCOUNTERED AN ERROR
+                    </div>
+                    <p id="seo-error-message" style="margin: 0; font-size: 0.8rem; color: #ff9999; line-height: 1.4;"></p>
+                </div>
+
+                <!-- 4. Comprehensive Audit Results Container -->
+                <div id="seo-results-container" style="display: none; flex-direction: column; gap: 16px;">
+                    <!-- Top Overview Banner (Score + Disclaimer) -->
+                    <div style="display: grid; grid-template-columns: 240px 1fr; gap: 16px;">
+                        <!-- Score Dial Card -->
+                        <div style="background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: bold;">SEO SCORE</span>
+                            <div style="display: flex; align-items: baseline; gap: 2px; margin: 8px 0 4px 0;">
+                                <span id="seo-score-num" style="font-size: 3.2rem; font-weight: 800; color: var(--accent-color); font-family: var(--font-mono); line-height: 1;">--</span>
+                                <span style="font-size: 1.1rem; color: var(--text-muted); font-family: var(--font-mono);">/100</span>
+                            </div>
+                            <span id="seo-tier-badge" style="font-size: 0.7rem; font-family: var(--font-mono); font-weight: bold; padding: 3px 10px; border-radius: 4px; background: rgba(0, 210, 255, 0.15); color: var(--accent-color);">STRONG</span>
+                        </div>
+
+                        <!-- Summary & Telemetry Overview -->
+                        <div style="background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <h4 id="seo-target-display" style="font-size: 0.85rem; color: var(--text-primary); margin: 0; word-break: break-all;">Target: https://example.com</h4>
+                                    <span id="seo-status-badge" style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--success-color); background: rgba(0, 255, 204, 0.1); padding: 2px 6px; border-radius: 4px;">HTTP 200</span>
+                                </div>
+                                <p id="seo-summary-tagline" style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">Good foundational SEO structure with actionable technical opportunities.</p>
+                            </div>
+
+                            <!-- Telemetry Chips -->
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                                <div style="background: rgba(0, 10, 20, 0.4); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 6px; padding: 6px 10px; text-align: center;">
+                                    <span style="font-size: 0.6rem; color: var(--text-muted); display: block;">LATENCY</span>
+                                    <span id="seo-stat-latency" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">-- ms</span>
+                                </div>
+                                <div style="background: rgba(0, 10, 20, 0.4); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 6px; padding: 6px 10px; text-align: center;">
+                                    <span style="font-size: 0.6rem; color: var(--text-muted); display: block;">PAYLOAD</span>
+                                    <span id="seo-stat-size" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">-- KB</span>
+                                </div>
+                                <div style="background: rgba(0, 10, 20, 0.4); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 6px; padding: 6px 10px; text-align: center;">
+                                    <span style="font-size: 0.6rem; color: var(--text-muted); display: block;">WORD COUNT</span>
+                                    <span id="seo-stat-words" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">--</span>
+                                </div>
+                                <div style="background: rgba(0, 10, 20, 0.4); border: 1px solid rgba(0, 210, 255, 0.1); border-radius: 6px; padding: 6px 10px; text-align: center;">
+                                    <span style="font-size: 0.6rem; color: var(--text-muted); display: block;">RESOURCES</span>
+                                    <span id="seo-stat-resources" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">--</span>
+                                </div>
+                            </div>
+
+                            <!-- Disclaimer Notice -->
+                            <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
+                                ℹ️ <em>SEO Score is a technical and on-page audit score based on signals observable by J.A.R.V.I.S. It is not a Google ranking score.</em>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Breakdown Cards Grid -->
+                    <div>
+                        <h4 style="font-size: 0.75rem; color: var(--accent-color); letter-spacing: 1.5px; margin: 0 0 10px 0;">CATEGORY BREAKDOWN &amp; WEIGHTED SCORES</h4>
+                        <div id="seo-categories-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+                            <!-- Dynamic category cards -->
+                        </div>
+                    </div>
+
+                    <!-- What to Fix First (Action Plan) -->
+                    <div style="background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1.5px; margin: 0;">🛠️ WHAT TO FIX FIRST (PRIORITIZED ACTION PLAN)</h4>
+                            <span id="seo-action-items-count" style="font-size: 0.7rem; font-family: var(--font-mono); color: var(--text-secondary);">0 Actions</span>
+                        </div>
+                        <div id="seo-action-plan-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Dynamic action items -->
+                        </div>
+                    </div>
+
+                    <!-- AI Strategic Insights (Optional/Grounded) -->
+                    <div id="seo-ai-insights-box" style="background: rgba(0, 10, 20, 0.8); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 18px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                            <h4 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1.5px; margin: 0;">AI STRATEGIC REASONING &amp; ARCHITECTURE SUMMARY</h4>
+                        </div>
+                        <div id="seo-ai-insights-content" style="font-size: 0.78rem; color: #bde0fe; line-height: 1.6; white-space: pre-wrap; font-family: var(--font-sans);"></div>
+                    </div>
+
+                    <!-- Evidence-Based Findings Explorer -->
+                    <div style="background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                            <h4 style="font-size: 0.8rem; color: var(--accent-color); letter-spacing: 1.5px; margin: 0;">EVIDENCE-BASED AUDIT FINDINGS</h4>
+                            <!-- Filter pills -->
+                            <div style="display: flex; gap: 4px;" id="seo-findings-filters">
+                                <button class="mem-filter-btn active" data-filter="all">ALL (<span id="count-findings-all">0</span>)</button>
+                                <button class="mem-filter-btn" data-filter="critical">CRITICAL/HIGH (<span id="count-findings-crit">0</span>)</button>
+                                <button class="mem-filter-btn" data-filter="warning">WARNINGS (<span id="count-findings-warn">0</span>)</button>
+                                <button class="mem-filter-btn" data-filter="passed">PASSED (<span id="count-findings-pass">0</span>)</button>
+                            </div>
+                        </div>
+                        <div id="seo-findings-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Dynamic Findings Cards -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="modal-actions" style="padding: 12px 20px; background: rgba(0, 20, 30, 0.7); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px;">
+                    <button class="control-btn" id="seo-copy-btn" style="padding: 8px 18px; font-weight: bold; letter-spacing: 0.5px; display: none;">
+                        COPY REPORT (MARKDOWN)
+                    </button>
+                    <button class="control-btn btn-secondary" id="seo-reset-btn" style="padding: 8px 14px; display: none;">
+                        AUDIT ANOTHER URL
+                    </button>
+                </div>
+                <button class="control-btn btn-secondary" id="seo-modal-close-btn" style="padding: 8px 16px;">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="three.min.js"></script>
+    <script src="maplibre-gl.js"></script>
+    <script src="globe.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

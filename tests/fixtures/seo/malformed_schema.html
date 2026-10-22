@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Broken Schema Test</title>
+    <!-- Malformed JSON-LD with syntax error -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Broken Product Widget",
+        "price": 49.99, // trailing comma / comment invalid in standard JSON
+    }
+    </script>
+</head>
+<body>
+    <h1>Product with Broken JSON-LD</h1>
+</body>
+</html>

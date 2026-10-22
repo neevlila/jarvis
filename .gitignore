@@ -1,0 +1,51 @@
+# J.A.R.V.I.S. — .gitignore
+# ─────────────────────────────────────────────────────────────
+
+# ── Secrets — NEVER commit these ─────────────────────────────
+.env
+*.env
+.env.*
+
+# ── Python cache ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ──────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Build artifacts ───────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ── Node / Frontend ───────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ── OS artifacts ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Render / Deploy ───────────────────────────────────────────
+*.log
+
+# ── Temporary / scratch ───────────────────────────────────────
+temp_run/
+scratch/
+jarvis_documents/
+*.tmp
+*.bak
+
+# ── Test / Coverage ───────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/

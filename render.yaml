@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────
+#  render.yaml — Render Blueprint (Infrastructure as Code)
+#  Docs: https://render.com/docs/blueprint-spec
+# ─────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: jarvis-ai
+    runtime: python
+    plan: free                          # Free tier
+
+    # ── Build ────────────────────────────────────────────────
+    buildCommand: pip install -r requirements.txt
+
+    # ── Start ────────────────────────────────────────────────
+    # gunicorn reads gunicorn.conf.py automatically when present
+    startCommand: gunicorn wsgi:application -c gunicorn.conf.py
+
+    # ── Health Management ────────────────────────────────────
+    healthCheckPath: /health            # Render polls this endpoint
+    numInstances: 1                     # Free tier = 1 instance
+
+    # ── Auto-deploy ──────────────────────────────────────────
+    autoDeploy: true
+
+    # ── Environment Variables ─────────────────────────────────
+    # Set sensitive values in Render Dashboard → Environment
+    # Non-secret defaults are listed here for documentation.
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+
+      - key: PORT
+        value: "10000"
+
+      # Render injects this automatically — used for CORS whitelist
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          type: web
+          name: jarvis-ai
+          property: host
+
+      # ── Secrets: add these in Render Dashboard ────────────
+      # (Do NOT commit real values here — use Dashboard env vars)
+      - key: WEATHER_API_KEY
+        sync: false
+
+      - key: NEWS_API_KEY
+        sync: false
+
+      - key: GROQ_API_KEY
+        sync: false
+
+      - key: NVIDIA_NEMOTRON_API_KEY
+        sync: false
+
+      - key: NVIDIA_GEMMA_API_KEY
+        sync: false
+
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      - key: NVIDIA_MISTRAL_API_KEY
+        sync: false
+
+      - key: NVIDIA_API_KEY
+        sync: false
+
+      - key: NVIDIA_BASE_URL
+        value: "https://integrate.api.nvidia.com/v1"
+
+      - key: NVIDIA_VISION_API_KEY
+        sync: false
