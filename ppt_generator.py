@@ -3,9 +3,18 @@ import re
 import time
 import os
 from html import unescape
-import win32com.client as win32
-import tkinter as tk
-from tkinter import ttk, filedialog
+try:
+    import win32com.client as win32
+except Exception:
+    win32 = None
+
+try:
+    import tkinter as tk
+    from tkinter import ttk, filedialog
+except Exception:
+    tk = None
+    ttk = None
+    filedialog = None
 
 try:
     import google.generativeai as genai

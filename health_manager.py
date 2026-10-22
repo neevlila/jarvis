@@ -172,41 +172,45 @@ def register_health_routes(app: Flask, throttler: RequestThrottler, monitor: Hea
     Attaches /health, /ready, and /metrics routes to the given Flask app.
     Call this AFTER creating your app and the two managers.
     """
+    rules = [rule.rule for rule in app.url_map.iter_rules()]
 
-    @app.route("/health")
-    def _liveness():
-        """Liveness probe — Render polls this every ~30 s."""
-        return jsonify({
-            "status": "ok",
-            "service": "J.A.R.V.I.S.",
-            "platform": sys.platform,
-            "uptime_s": monitor.uptime_seconds,
-        }), 200
-
-    @app.route("/ready")
-    def _readiness():
-        """Readiness probe — checks assistant and error rate."""
-        try:
-            import buddy
-            assistant_ready = buddy.assistant_ref is not None
-        except Exception:
-            assistant_ready = False
-
-        if not assistant_ready:
-            return jsonify({"status": "initializing", "assistant": False}), 503
-
-        if not monitor.is_healthy:
+    if "/health" not in rules:
+        @app.route("/health")
+        def _liveness():
+            """Liveness probe — Render polls this every ~30 s."""
             return jsonify({
-                "status": "degraded",
-                "error_rate_pct": monitor.error_rate,
-            }), 503
+                "status": "ok",
+                "service": "J.A.R.V.I.S.",
+                "platform": sys.platform,
+                "uptime_s": monitor.uptime_seconds,
+            }), 200
 
-        return jsonify({"status": "ready", "assistant": True}), 200
+    if "/ready" not in rules:
+        @app.route("/ready")
+        def _readiness():
+            """Readiness probe — checks assistant and error rate."""
+            try:
+                import buddy
+                assistant_ready = buddy.assistant_ref is not None
+            except Exception:
+                assistant_ready = False
 
-    @app.route("/metrics")
-    def _metrics():
-        """Operational metrics for dashboards / alerting."""
-        return jsonify({
-            "throttler": throttler.stats,
-            "health":    monitor.stats,
-        }), 200
+            if not assistant_ready:
+                return jsonify({"status": "initializing", "assistant": False}), 503
+
+            if not monitor.is_healthy:
+                return jsonify({
+                    "status": "degraded",
+                    "error_rate_pct": monitor.error_rate,
+                }), 503
+
+            return jsonify({"status": "ready", "assistant": True}), 200
+
+    if "/metrics" not in rules:
+        @app.route("/metrics")
+        def _metrics():
+            """Operational metrics for dashboards / alerting."""
+            return jsonify({
+                "throttler": throttler.stats,
+                "health":    monitor.stats,
+            }), 200

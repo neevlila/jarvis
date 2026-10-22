@@ -1,6 +1,10 @@
 import qrcode
-import tkinter as tk
-from tkinter import ttk
+try:
+    import tkinter as tk
+    from tkinter import ttk
+except Exception:
+    tk = None
+    ttk = None
 try:
     from PIL import Image, ImageTk
     _PIL_AVAILABLE = True

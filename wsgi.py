@@ -32,9 +32,8 @@ if not IS_WINDOWS:
         "pyautogui", "pygetwindow", "pyperclip",
         "pynput", "pynput.keyboard",
         "win32gui", "win32con", "win32api", "win32process", "win32com",
-        "win32com.client", "winreg",
+        "win32com.client",
         "uiautomation", "keyboard",
-        "tkinter", "tkinter.ttk",
         "speedtest",
     ]
     for _mod in _WIN_STUBS:

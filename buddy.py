@@ -10,29 +10,71 @@ import urllib.request
 import logging
 from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
-import pyttsx3
-import speech_recognition as sr
-import pythoncom
+try:
+    import pyttsx3
+except Exception:
+    pyttsx3 = None
+
+try:
+    import speech_recognition as sr
+except Exception:
+    sr = None
+
+try:
+    import pythoncom
+except Exception:
+    pythoncom = None
+
 import webbrowser
 import os
 import psutil
 import platform
 import subprocess
-import pyautogui
+
+try:
+    import pyautogui
+except Exception:
+    pyautogui = None
+
 import wikipedia
 import time
 import threading
-from pynput.keyboard import Controller
+
+try:
+    from pynput.keyboard import Controller
+except Exception:
+    Controller = None
+
 import requests
-import speedtest
-import cv2
+
+try:
+    import speedtest
+except Exception:
+    speedtest = None
+
+try:
+    import cv2
+except Exception:
+    cv2 = None
+
 import re
 import datetime
 from queue import Queue
-import win32gui
-import win32con
-import win32process
-import winreg
+
+try:
+    import win32gui
+    import win32con
+    import win32process
+except Exception:
+    win32gui = None
+    win32con = None
+    win32process = None
+
+try:
+    import winreg
+except Exception:
+    winreg = None
+
 import qrcode
 import google.generativeai as genai
 import config as cfg
@@ -111,10 +153,10 @@ api_token = secrets.token_hex(16)
 
 @app.before_request
 def verify_security_token():
-    # Exclude index page serving, CORS preflight pre-checks, favicon, and static assets
+    # Exclude index page serving, CORS preflight pre-checks, favicon, health check and static assets
     if request.method == 'OPTIONS':
         return
-    if request.path in ['/', '/index.html', '/favicon.ico', '/favicon.svg'] or request.path.startswith('/static/'):
+    if request.path in ['/', '/index.html', '/favicon.ico', '/favicon.svg', '/health', '/ready', '/metrics'] or request.path.startswith('/static/'):
         return
     
     # Verify samesite Strict cookie
@@ -175,6 +217,14 @@ def index():
 @app.route('/favicon.svg')
 def favicon():
     return app.send_static_file('favicon.svg')
+
+@app.route('/health')
+def health_endpoint():
+    return jsonify({
+        'status': 'ok',
+        'service': 'J.A.R.V.I.S.',
+        'platform': platform.system()
+    }), 200
 
 @app.route('/api/status')
 def get_status():
@@ -1469,12 +1519,19 @@ class JarvisAssistant:
         self.was_listening = False
         self.speak_queue = Queue()
         self.is_speaking = False
-        self.r = sr.Recognizer()
-        self.r.dynamic_energy_threshold = True
-        self.r.pause_threshold = 0.8
+        if sr:
+            try:
+                self.r = sr.Recognizer()
+                self.r.dynamic_energy_threshold = True
+                self.r.pause_threshold = 0.8
+            except Exception:
+                self.r = None
+        else:
+            self.r = None
         
-        # Start speech worker thread
-        threading.Thread(target=self._speech_worker, daemon=True).start()
+        # Start speech worker thread if pyttsx3 is available
+        if pyttsx3:
+            threading.Thread(target=self._speech_worker, daemon=True).start()
 
         try:
             import config as cfg
@@ -1483,7 +1540,13 @@ class JarvisAssistant:
             print(f"Error loading centralized config: {e}")
             self.config = {}
 
-        self.keyboard = Controller()
+        if Controller:
+            try:
+                self.keyboard = Controller()
+            except Exception:
+                self.keyboard = None
+        else:
+            self.keyboard = None
         self.typing_speed = 0.1
         self.typing_active = False
         self.music_dir = "C:\\Users\\hp\\Music"
@@ -1603,8 +1666,13 @@ class JarvisAssistant:
             print(f"Error starting Flask server: {e}")
 
     def _speech_worker(self):
-        import pythoncom
-        pythoncom.CoInitialize()
+        if not pyttsx3:
+            return
+        if pythoncom:
+            try:
+                pythoncom.CoInitialize()
+            except Exception:
+                pass
         try:
             engine = pyttsx3.init('sapi5')
             voices = engine.getProperty('voices')
@@ -1632,7 +1700,11 @@ class JarvisAssistant:
                 self.is_speaking = False
                 self.speak_queue.task_done()
                 
-        pythoncom.CoUninitialize()
+        if pythoncom:
+            try:
+                pythoncom.CoUninitialize()
+            except Exception:
+                pass
 
     def speak(self, text: str):
         """Convert text to speech"""
