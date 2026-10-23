@@ -443,7 +443,7 @@ class ProviderManager:
 
         for attempt in range(2):
             try:
-                model_name = "gemini-2.0-flash"
+                model_name = "gemini-2.5-flash"
                 if system_prompt:
                     model = genai.GenerativeModel(
                         model_name=model_name,

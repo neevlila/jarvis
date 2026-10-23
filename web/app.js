@@ -1167,7 +1167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewDashboard) viewDashboard.style.display = 'none';
         if (viewCodeAssistant) {
             viewCodeAssistant.style.display = 'none';
-            viewCodeAssistant.classList.remove('view-active');
         }
         if (viewIdeaEngine) viewIdeaEngine.style.display = 'none';
         if (viewIntelligence) viewIntelligence.style.display = 'none';
@@ -1195,8 +1194,15 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCodeAssistant.addEventListener('click', () => {
             deactivateAllNavs();
             btnCodeAssistant.classList.add('active');
-            viewCodeAssistant.classList.add('view-active');
-            viewCodeAssistant.style.display = (window.innerWidth <= 960) ? 'flex' : 'grid';
+            const isMobile = window.innerWidth <= 960;
+            viewCodeAssistant.style.display = isMobile ? 'flex' : 'grid';
+            viewCodeAssistant.style.gridTemplateColumns = isMobile ? '' : '360px minmax(0, 1fr)';
+            viewCodeAssistant.style.flexDirection = 'column';
+            viewCodeAssistant.style.gap = isMobile ? '16px' : '20px';
+            viewCodeAssistant.style.height = isMobile ? 'auto' : '100%';
+            viewCodeAssistant.style.overflowY = isMobile ? 'auto' : 'hidden';
+            viewCodeAssistant.style.minHeight = '0';
+            viewCodeAssistant.style.width = '100%';
             
             // Hide right panel and console footer
             const rightPanel = document.querySelector('.right-panel');

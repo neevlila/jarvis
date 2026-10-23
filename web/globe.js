@@ -819,7 +819,7 @@
         // 5. RESIZE & GLOBAL EVENTS
         // ==================================================================
         setupResizeListener() {
-            window.addEventListener('resize', () => {
+            const handleResize = () => {
                 if (this.canvasWrap && this.renderer && this.camera) {
                     const width = this.canvasWrap.clientWidth || 360;
                     const height = this.canvasWrap.clientHeight || 300;
@@ -827,10 +827,13 @@
                     this.camera.updateProjectionMatrix();
                     this.renderer.setSize(width, height);
                 }
-                if (this.map) {
-                    this.map.resize();
-                }
-            });
+                if (this.map) { this.map.resize(); }
+            };
+            window.addEventListener('resize', handleResize);
+            // Also respond to container size changes (e.g. sidebar collapse, layout shifts)
+            if (window.ResizeObserver && this.canvasWrap) {
+                new ResizeObserver(handleResize).observe(this.canvasWrap);
+            }
         }
 
         bindGlobalEvents() {
