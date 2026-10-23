@@ -166,12 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error('Status poll failed');
             const data = await res.json();
             
-            // Update resource values
-            cpuValue.innerText = `${Math.round(data.cpu)}%`;
-            cpuFill.style.width = `${data.cpu}%`;
+            // Update resource values if DOM elements exist
+            if (cpuValue && data.cpu !== undefined) cpuValue.innerText = `${Math.round(data.cpu)}%`;
+            if (cpuFill && data.cpu !== undefined) cpuFill.style.width = `${data.cpu}%`;
             
-            ramValue.innerText = `${Math.round(data.ram)}%`;
-            ramFill.style.width = `${data.ram}%`;
+            if (ramValue && data.ram !== undefined) ramValue.innerText = `${Math.round(data.ram)}%`;
+            if (ramFill && data.ram !== undefined) ramFill.style.width = `${data.ram}%`;
             
             // Update drives dynamically
             const drivesContainer = document.getElementById('drives-container');
@@ -802,85 +802,120 @@ document.addEventListener('DOMContentLoaded', () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
-            // Browser doesn't support Web Speech API
-            btnMic.title = 'Voice input not supported in this browser. Please use Chrome.';
+            btnMic.title = 'Voice input not supported in this browser. Please use Chrome or Edge.';
             btnMic.style.opacity = '0.4';
             btnMic.addEventListener('click', () => {
-                appendLog('SYSTEM', 'Voice input is only supported in Google Chrome. Please open JARVIS in Chrome.', 'error-log');
+                appendLog('SYSTEM', 'Voice input requires Web Speech API (supported in Google Chrome & Microsoft Edge).', 'error-log');
             });
         } else {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'en-IN';
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
+            let recognition = null;
             let micActive = false;
+            let spokenFinalCommand = '';
 
-            btnMic.addEventListener('click', () => {
+            const initRecognition = () => {
+                const rec = new SpeechRecognition();
+                rec.lang = navigator.language || (navigator.languages && navigator.languages[0]) || 'en-US';
+                rec.continuous = false;
+                rec.interimResults = true;
+                rec.maxAlternatives = 1;
+
+                rec.onstart = () => {
+                    micActive = true;
+                    spokenFinalCommand = '';
+                    btnMic.classList.add('listening');
+                    if (commandInput) {
+                        commandInput.placeholder = '🎙️ Listening to your voice... Speak now';
+                    }
+                    const sidebarVoiceStatus = document.getElementById('sidebar-voice-status');
+                    if (sidebarVoiceStatus) {
+                        sidebarVoiceStatus.innerText = 'RECORDING...';
+                        sidebarVoiceStatus.style.color = 'var(--accent-color)';
+                    }
+                    appendLog('SYSTEM', '🎙️ Microphone engaged. Listening for instructions…', 'system-log');
+                };
+
+                rec.onresult = (event) => {
+                    let accumulatedTranscript = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        const res = event.results[i];
+                        if (res && res[0] && res[0].transcript) {
+                            accumulatedTranscript += res[0].transcript;
+                        }
+                    }
+                    accumulatedTranscript = accumulatedTranscript.trim();
+                    if (accumulatedTranscript && commandInput) {
+                        commandInput.value = accumulatedTranscript;
+                    }
+
+                    // Check for final recognition flag
+                    for (let i = 0; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            spokenFinalCommand = accumulatedTranscript;
+                            break;
+                        }
+                    }
+                };
+
+                rec.onerror = (event) => {
+                    let msg = 'Voice recognition error.';
+                    if (event.error === 'no-speech') {
+                        msg = 'No speech detected. Please speak closer to your microphone.';
+                    } else if (event.error === 'audio-capture') {
+                        msg = 'Microphone hardware not detected. Please verify your microphone settings.';
+                    } else if (event.error === 'not-allowed') {
+                        msg = 'Microphone access denied. Please allow microphone permission in your browser URL bar.';
+                    } else if (event.error === 'network') {
+                        msg = 'Network connection issue contacting speech recognition services.';
+                    } else {
+                        msg = `Voice recognition error: ${event.error}`;
+                    }
+                    appendLog('SYSTEM', `[MIC] ${msg}`, 'error-log');
+                };
+
+                rec.onend = () => {
+                    micActive = false;
+                    btnMic.classList.remove('listening');
+                    if (commandInput) {
+                        commandInput.placeholder = 'Transmit instruction code to JARVIS...';
+                    }
+                    const sidebarVoiceStatus = document.getElementById('sidebar-voice-status');
+                    if (sidebarVoiceStatus) {
+                        sidebarVoiceStatus.innerText = 'ONLINE // READY';
+                        sidebarVoiceStatus.style.color = 'var(--success-color)';
+                    }
+
+                    const commandToExecute = spokenFinalCommand || (commandInput ? commandInput.value.trim() : '');
+                    spokenFinalCommand = '';
+                    if (commandToExecute) {
+                        sendCommand(commandToExecute);
+                    }
+                };
+
+                return rec;
+            };
+
+            btnMic.addEventListener('click', async () => {
                 if (micActive) {
-                    recognition.stop();
+                    if (recognition) {
+                        recognition.stop();
+                    }
                     return;
                 }
-                recognition.start();
-            });
 
-            recognition.onstart = () => {
-                micActive = true;
-                btnMic.classList.add('listening');
-                appendLog('SYSTEM', '🎙️ Listening… Speak your command now.', 'system-log');
-            };
-
-            recognition.onresult = async (event) => {
-                const lastResultIndex = event.results.length - 1;
-                const lastResult = event.results[lastResultIndex];
-                if (!lastResult.isFinal) return; // Skip interim results
-
-                const transcript = lastResult[0].transcript.trim();
-                if (!transcript) return;
-
-                appendLog('USER (Voice)', transcript, 'user-log');
-
-                // Send recognised text as a normal command
                 try {
-                    const res = await fetch(`${apiBase}/api/command`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command: transcript, type_mode: true })
-                    });
-                    const data = await res.json();
-                    if (data.response) {
-                        appendLog('JARVIS', data.response, 'assistant-log');
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        // Request audio stream permission gracefully
+                        await navigator.mediaDevices.getUserMedia({ audio: true });
                     }
-                    if (data.location_target) {
-                        if (jarvisGlobeInstance) {
-                            if (data.location_target.action === 'reset') {
-                                jarvisGlobeInstance.resetToIdle();
-                            } else {
-                                jarvisGlobeInstance.locateTarget(data.location_target);
-                            }
-                        }
-                        window.dispatchEvent(new CustomEvent('JARVIS_LOCATION_RESOLVED', { detail: data.location_target }));
-                    }
+                    recognition = initRecognition();
+                    recognition.start();
                 } catch (err) {
-                    console.error(err);
-                    appendLog('SYSTEM', 'Failed to send voice command to JARVIS.', 'error-log');
+                    console.error('Microphone error:', err);
+                    appendLog('SYSTEM', 'Microphone access was blocked or unavailable. Please permit microphone access in your browser.', 'error-log');
+                    micActive = false;
+                    btnMic.classList.remove('listening');
                 }
-            };
-
-            recognition.onerror = (event) => {
-                let msg = 'Voice recognition error.';
-                if (event.error === 'no-speech')        msg = 'No speech detected. Please try again.';
-                else if (event.error === 'audio-capture') msg = 'Microphone not found. Check your mic and try again.';
-                else if (event.error === 'not-allowed')   msg = 'Microphone access denied. Allow mic permission and reload.';
-                else if (event.error === 'network')       msg = 'Network error during voice recognition.';
-                appendLog('SYSTEM', msg, 'error-log');
-            };
-
-            recognition.onend = () => {
-                micActive = false;
-                btnMic.classList.remove('listening');
-            };
+            });
         }
     }
 
