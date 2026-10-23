@@ -2,6 +2,9 @@
 J.A.R.V.I.S. Security Assessment Engine — Nmap Scanner Adapter
 ================================================================
 Wraps the Nmap binary for authorized network discovery and service inventory.
+When the Nmap CLI binary is not present (such as in cloud container runtimes),
+it falls back automatically to a high-performance Native Python Socket Port
+Discovery and Service Banner Grabbing Engine.
 
 Security guarantees
 -------------------
@@ -9,24 +12,21 @@ Security guarantees
 - Commands built via list arguments (no shell=True, no interpolation).
 - XML output parsed via stdlib xml.etree (no shell pipe, size-limited).
 - Allowlisted profiles only — no arbitrary nmap flags accepted from users.
-- Timeouts enforced at both the subprocess and nmap script level.
+- Timeouts enforced at both the subprocess and socket level.
 - Partial results returned on timeout rather than raising.
-
-Profile → nmap flag mapping
----------------------------
-asset_discovery   → -sn  (ping sweep, no port scan)
-service_inventory → -sV -sC --top-ports 1000  (safe service detection)
-comprehensive     → -sV -sC -O --top-ports 1000  (adds OS detection)
 """
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 import re
 import shutil
+import socket
 import subprocess
 import time
+import urllib.parse
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -40,6 +40,43 @@ logger = logging.getLogger("jarvis.security.nmap")
 
 # Maximum XML output size accepted from nmap (10 MB)
 _MAX_XML_BYTES = 10 * 1024 * 1024
+
+# Known port to service mapping for native socket scanner fallback
+_KNOWN_PORTS_SERVICES: dict[int, str] = {
+    21: "ftp",
+    22: "ssh",
+    23: "telnet",
+    25: "smtp",
+    53: "dns",
+    80: "http",
+    110: "pop3",
+    111: "rpcbind",
+    135: "msrpc",
+    139: "netbios-ssn",
+    143: "imap",
+    443: "https",
+    445: "microsoft-ds",
+    465: "smtps",
+    587: "submission",
+    993: "imaps",
+    995: "pop3s",
+    1433: "ms-sql-s",
+    1521: "oracle",
+    2049: "nfs",
+    2375: "docker",
+    3000: "ppp",
+    3306: "mysql",
+    3389: "ms-wbt-server",
+    5000: "upnp",
+    5432: "postgresql",
+    5900: "vnc",
+    6379: "redis",
+    8000: "http-alt",
+    8080: "http-proxy",
+    8443: "https-alt",
+    9200: "wap-wsp",
+    27017: "mongod",
+}
 
 # Allowlisted nmap profile flag sets (no user-supplied flags accepted)
 _PROFILE_FLAGS: dict[ScanProfile, list[str]] = {
@@ -97,39 +134,41 @@ class NmapScanner(ScannerBase):
         errors: list[str] = []
 
         nmap_bin = shutil.which(self._nmap_path) or shutil.which("nmap")
-        if not nmap_bin:
+        if nmap_bin:
+            try:
+                result = subprocess.run(
+                    [nmap_bin, "--version"],
+                    capture_output=True, text=True, timeout=5
+                )
+                m = re.search(r"Nmap version ([\d.]+)", result.stdout)
+                if m:
+                    version = f"Nmap CLI v{m.group(1)}"
+            except Exception as exc:
+                errors.append(f"Version check failed: {exc}")
+
             return ScannerHealth(
                 name=self.name,
-                available=False,
-                last_error="Nmap binary not found on PATH.",
+                available=True,
+                version=version or "Nmap CLI",
                 supported_profiles=[p.value for p in self.supported_profiles()],
                 execution_location="local_agent",
-                resource_note="Install nmap: https://nmap.org/download.html",
-                config_errors=["nmap not found on PATH"],
+                resource_note="Nmap binary available for native host and port discovery.",
+                config_errors=errors,
             )
 
-        try:
-            result = subprocess.run(
-                [nmap_bin, "--version"],
-                capture_output=True, text=True, timeout=5
-            )
-            m = re.search(r"Nmap version ([\d.]+)", result.stdout)
-            if m:
-                version = m.group(1)
-        except Exception as exc:
-            errors.append(f"Version check failed: {exc}")
-
+        # Built-in fallback: Native Python Socket Port Discovery Engine
         return ScannerHealth(
             name=self.name,
-            available=bool(nmap_bin),
-            version=version,
+            available=True,
+            version="Native Socket Port Discovery v1.0 (Nmap-compatible)",
             supported_profiles=[p.value for p in self.supported_profiles()],
-            execution_location="local_agent",
+            execution_location="cloud_and_local",
             resource_note=(
-                "Nmap must run on the local Windows agent. "
-                "The cloud API cannot execute Nmap directly."
+                "Native Python TCP socket discovery engine active. "
+                "Performs fast port discovery and service banner extraction. "
+                "Nmap CLI binary can also be installed locally for advanced OS fingerprinting."
             ),
-            config_errors=errors,
+            config_errors=[],
         )
 
     # ── Run ───────────────────────────────────────────────────────────────────
@@ -139,12 +178,8 @@ class NmapScanner(ScannerBase):
         nmap_bin = shutil.which(self._nmap_path) or shutil.which("nmap")
 
         if not nmap_bin:
-            return ScanResult(
-                scanner_name=self.name,
-                scan_job_id=job.id,
-                success=False,
-                error="Nmap binary not found. Install nmap and ensure it is on PATH.",
-            )
+            logger.info("Nmap binary not found on PATH — executing via Native Socket Discovery Engine.")
+            return self._run_native_socket_scan(job, timeout_s)
 
         profile_flags = _PROFILE_FLAGS.get(job.profile)
         if not profile_flags:
@@ -185,12 +220,7 @@ class NmapScanner(ScannerBase):
                 warnings=["Scan timed out — results may be incomplete."],
             )
         except FileNotFoundError:
-            return ScanResult(
-                scanner_name=self.name,
-                scan_job_id=job.id,
-                success=False,
-                error="Nmap binary not found during execution.",
-            )
+            return self._run_native_socket_scan(job, timeout_s)
         except Exception as exc:
             return ScanResult(
                 scanner_name=self.name,
@@ -247,139 +277,336 @@ class NmapScanner(ScannerBase):
             duration_s=duration,
         )
 
+    # ── Native Socket Scanner Fallback ────────────────────────────────────────
+
+    def _run_native_socket_scan(self, job: ScanJob, timeout_s: int) -> ScanResult:
+        start = time.monotonic()
+        raw_target = job.target.strip()
+        host = raw_target
+        custom_port = None
+        if "://" in raw_target:
+            parsed = urllib.parse.urlsplit(raw_target)
+            host = parsed.hostname or raw_target
+            if parsed.port:
+                custom_port = parsed.port
+        elif ":" in raw_target and not raw_target.count(":") > 1:
+            parts = raw_target.split(":", 1)
+            host = parts[0]
+            try:
+                custom_port = int(parts[1])
+            except ValueError:
+                pass
+
+        try:
+            ip = socket.gethostbyname(host)
+        except Exception as exc:
+            return ScanResult(
+                scanner_name=self.name,
+                scan_job_id=job.id,
+                success=False,
+                error=f"Native socket scanner could not resolve target '{host}': {exc}",
+                duration_s=time.monotonic() - start,
+            )
+
+        if job.profile == ScanProfile.ASSET_DISCOVERY:
+            ports_to_scan = [80, 443, 22, 53, 8080, 8443]
+        else:
+            ports_to_scan = [
+                21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 465, 587,
+                993, 995, 1433, 1521, 2049, 2375, 3000, 3306, 3389, 5000, 5432, 5900,
+                6379, 8000, 8080, 8443, 9200, 27017
+            ]
+        if custom_port and custom_port not in ports_to_scan:
+            ports_to_scan.append(custom_port)
+
+        logger.info(
+            "Native socket scan starting: job=%s host=%s ip=%s ports=%d",
+            job.id, host, ip, len(ports_to_scan)
+        )
+
+        open_ports: list[dict[str, Any]] = []
+
+        def probe(port: int):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(min(1.5, max(0.5, timeout_s / 20)))
+            try:
+                res = s.connect_ex((ip, port))
+                if res == 0:
+                    banner = ""
+                    svc = _KNOWN_PORTS_SERVICES.get(port, "unknown")
+                    try:
+                        s.settimeout(1.0)
+                        if port in (80, 8080, 8000, 5000, 3000):
+                            s.sendall(f"HEAD / HTTP/1.0\r\nHost: {host}\r\nUser-Agent: J.A.R.V.I.S-Security-Engine\r\n\r\n".encode())
+                            data = s.recv(1024).decode("latin-1", errors="replace")
+                            for line in data.splitlines():
+                                if line.lower().startswith("server:"):
+                                    banner = line.split(":", 1)[1].strip()
+                                    break
+                        elif port == 22:
+                            data = s.recv(256).decode("utf-8", errors="replace").strip()
+                            banner = data
+                        elif port in (21, 25, 110, 143):
+                            data = s.recv(512).decode("latin-1", errors="replace").strip()
+                            banner = data
+                    except Exception:
+                        pass
+                    return {
+                        "port": port,
+                        "protocol": "tcp",
+                        "state": "open",
+                        "service": svc,
+                        "banner": banner,
+                    }
+            except Exception:
+                pass
+            finally:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+            return None
+
+        workers = min(20, len(ports_to_scan))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_port = {executor.submit(probe, p): p for p in ports_to_scan}
+            for future in concurrent.futures.as_completed(future_to_port):
+                res = future.result()
+                if res:
+                    open_ports.append(res)
+
+        open_ports.sort(key=lambda x: x["port"])
+
+        hostname_str = host if host != ip else None
+        asset = Asset(
+            asset_type=AssetType.HOST,
+            ip_address=ip,
+            hostname=hostname_str,
+            criticality=Criticality.MEDIUM,
+            metadata={
+                "engine": "native_socket_engine",
+                "open_ports": [p["port"] for p in open_ports],
+                "services": [p["service"] for p in open_ports],
+            }
+        )
+
+        sensitive_services = {
+            "ssh": ("SSH service exposed", Severity.INFORMATIONAL),
+            "ftp": ("FTP service exposed (potentially insecure)", Severity.LOW),
+            "telnet": ("Telnet service detected (unencrypted)", Severity.HIGH),
+            "smtp": ("SMTP service exposed", Severity.INFORMATIONAL),
+            "rdp": ("RDP (Remote Desktop) service exposed", Severity.MEDIUM),
+            "ms-wbt-server": ("RDP service exposed", Severity.MEDIUM),
+            "vnc": ("VNC service exposed", Severity.MEDIUM),
+            "snmp": ("SNMP service exposed", Severity.MEDIUM),
+            "http": ("HTTP service (unencrypted) detected", Severity.LOW),
+            "redis": ("Redis database port exposed", Severity.HIGH),
+            "mongod": ("MongoDB database port exposed", Severity.HIGH),
+            "docker": ("Docker management port exposed", Severity.CRITICAL),
+        }
+
+        findings: list[Finding] = []
+        for port_info in open_ports:
+            port_num = port_info["port"]
+            svc_name = port_info["service"]
+            banner = port_info.get("banner", "")
+
+            evidence_parts = [f"Port: {port_num}/tcp (open)", f"Service: {svc_name}"]
+            if banner:
+                evidence_parts.append(f"Banner: {banner}")
+
+            title_override, sev_override = sensitive_services.get(
+                svc_name.lower(), (None, Severity.INFORMATIONAL)
+            )
+
+            finding = Finding(
+                title=title_override or f"Open port {port_num}/tcp ({svc_name or 'unknown'})",
+                description=(
+                    f"An open TCP port was detected at {ip}:{port_num}. "
+                    + (f"Identified service: {svc_name}." if svc_name else "Service unknown.")
+                    + (f" Banner: '{banner}'." if banner else "")
+                ),
+                asset_id=asset.id,
+                scan_job_id=job.id,
+                scanner=self.name,
+                detection_method="native_socket_port_scan",
+                affected_component=f"{ip}:{port_num}/tcp",
+                evidence=" | ".join(evidence_parts),
+                evidence_source="tcp_socket_connect",
+                severity=sev_override,
+                confidence=Confidence.CONFIRMED,
+                remediation=(
+                    "Review whether this port and service need to be publicly accessible. "
+                    "If not, restrict access with firewall rules. "
+                    "If the service is required, ensure it is running the latest patched version."
+                ),
+                tags=["nmap_compatible", "native_port_scan", svc_name or "unknown"],
+            )
+            findings.append(finding)
+
+        duration = time.monotonic() - start
+        raw = {
+            "engine": "native_socket_engine",
+            "hosts": [{
+                "ip": ip,
+                "hostname": hostname_str,
+                "ports": open_ports,
+            }] if open_ports or job.profile == ScanProfile.ASSET_DISCOVERY else []
+        }
+
+        assets = [asset] if (open_ports or job.profile == ScanProfile.ASSET_DISCOVERY) else []
+
+        return ScanResult(
+            scanner_name=self.name,
+            scan_job_id=job.id,
+            success=True,
+            assets=assets,
+            findings=findings,
+            raw_output=raw,
+            duration_s=duration,
+        )
+
     # ── XML parsing ───────────────────────────────────────────────────────────
 
     def _parse_xml(
         self, xml_text: str, job_id: str
     ) -> tuple[list[Asset], list[Finding], dict[str, Any]]:
         """
-        Parse nmap XML output into normalised Asset and Finding objects.
-        Uses only stdlib xml.etree — no external dependencies.
+        Parse Nmap XML output into normalized Asset and Finding records.
+        Robust against missing elements, malformed XML, and partial scans.
         """
         try:
             root = ET.fromstring(xml_text)
         except ET.ParseError as exc:
-            raise ValueError(f"Invalid XML from nmap: {exc}") from exc
+            raise ValueError(f"Malformed Nmap XML: {exc}") from exc
 
         assets:   list[Asset]   = []
         findings: list[Finding] = []
         raw_hosts: list[dict]   = []
 
-        for host_el in root.findall("host"):
-            host_data = self._parse_host(host_el, job_id)
-            if host_data:
-                asset, host_findings, raw = host_data
+        for host_elem in root.findall("host"):
+            status_elem = host_elem.find("status")
+            if status_elem is not None and status_elem.get("state") != "up":
+                continue
+
+            asset, host_findings, raw_host = self._parse_host(host_elem, job_id)
+            if asset:
                 assets.append(asset)
                 findings.extend(host_findings)
-                raw_hosts.append(raw)
+                raw_hosts.append(raw_host)
 
-        nmap_info = {
-            "scanner":    root.get("scanner", "nmap"),
-            "version":    root.get("version", ""),
-            "args":       root.get("args", ""),
-            "start":      root.get("start", ""),
-            "hosts_up":   root.findtext("runstats/hosts[@up]") or
-                          (root.find("runstats/hosts") or ET.Element("x")).get("up", "0"),
-            "hosts":      raw_hosts,
+        raw_summary: dict[str, Any] = {
+            "nmap_version": root.get("version"),
+            "args":         root.get("args"),
+            "start_time":   root.get("start"),
+            "hosts":        raw_hosts,
         }
-        return assets, findings, nmap_info
+        return assets, findings, raw_summary
 
     def _parse_host(
-        self, host_el: ET.Element, job_id: str
-    ) -> tuple[Asset, list[Finding], dict] | None:
-        """Extract one host from a <host> element."""
-        # Only process hosts that are marked "up"
-        status_el = host_el.find("status")
-        if status_el is None or status_el.get("state") != "up":
-            return None
-
+        self, host_elem: ET.Element, job_id: str
+    ) -> tuple[Asset | None, list[Finding], dict[str, Any]]:
+        """Extract Asset and Findings from a single <host> element."""
         # IP address
-        ip = None
-        hostname_str = None
-        for addr_el in host_el.findall("address"):
-            if addr_el.get("addrtype") in ("ipv4", "ipv6"):
-                ip = addr_el.get("addr")
+        ip: str | None = None
+        for addr in host_elem.findall("address"):
+            if addr.get("addrtype") in ("ipv4", "ipv6"):
+                ip = addr.get("addr")
+                break
+        if not ip:
+            return None, [], {}
 
         # Hostname
-        for hn_el in host_el.findall("hostnames/hostname"):
-            if hn_el.get("type") in ("user", "PTR"):
-                hostname_str = hn_el.get("name")
-                break
+        hostnames: list[str] = []
+        hn_elem = host_elem.find("hostnames")
+        if hn_elem is not None:
+            for hn in hn_elem.findall("hostname"):
+                name = hn.get("name")
+                if name:
+                    hostnames.append(name)
+        hostname_str = hostnames[0] if hostnames else None
 
-        if not ip:
-            return None
-
-        display = hostname_str or ip
+        # OS detection
+        os_info: dict[str, Any] = {}
+        os_elem = host_elem.find("os")
+        if os_elem is not None:
+            osmatch = os_elem.find("osmatch")
+            if osmatch is not None:
+                os_info = {
+                    "name":     osmatch.get("name"),
+                    "accuracy": osmatch.get("accuracy"),
+                }
 
         asset = Asset(
-            display_name=display,
             asset_type=AssetType.HOST,
             ip_address=ip,
             hostname=hostname_str,
-            discovery_source="nmap",
+            criticality=Criticality.MEDIUM,
+            metadata={
+                "os": os_info,
+                "hostnames": hostnames,
+            },
         )
 
-        findings: list[Finding] = []
-        raw_ports: list[dict]  = []
+        findings:  list[Finding] = []
+        raw_ports: list[dict]    = []
 
-        # OS detection
-        os_info: list[str] = []
-        for osmatch in host_el.findall("os/osmatch"):
-            name    = osmatch.get("name", "")
-            accuracy = osmatch.get("accuracy", "0")
-            os_info.append(f"{name} (accuracy {accuracy}%)")
+        ports_elem = host_elem.find("ports")
+        port_list = ports_elem.findall("port") if ports_elem is not None else []
 
-        # Ports
-        for port_el in host_el.findall("ports/port"):
-            port_num  = int(port_el.get("portid", 0))
-            protocol  = port_el.get("protocol", "tcp")
-            state_el  = port_el.find("state")
-            state     = state_el.get("state", "unknown") if state_el is not None else "unknown"
-
-            if state != "open":
+        for port_elem in port_list:
+            state_elem = port_elem.find("state")
+            if state_elem is None or state_elem.get("state") != "open":
                 continue
 
-            service_el = port_el.find("service")
-            svc_name   = service_el.get("name", "") if service_el is not None else ""
-            svc_product = service_el.get("product", "") if service_el is not None else ""
-            svc_version = service_el.get("version", "") if service_el is not None else ""
-            svc_extra   = service_el.get("extrainfo", "") if service_el is not None else ""
-            svc_tunnel  = service_el.get("tunnel", "") if service_el is not None else ""
-            svc_conf    = service_el.get("conf", "0") if service_el is not None else "0"
+            port_id  = port_elem.get("portid", "?")
+            protocol = port_elem.get("protocol", "tcp")
+            try:
+                port_num = int(port_id)
+            except ValueError:
+                port_num = 0
 
-            svc_str = " ".join(filter(None, [svc_product, svc_version, svc_extra])).strip()
+            svc_elem    = port_elem.find("service")
+            svc_name    = svc_elem.get("name", "") if svc_elem is not None else ""
+            svc_product = svc_elem.get("product", "") if svc_elem is not None else ""
+            svc_version = svc_elem.get("version", "") if svc_elem is not None else ""
+            svc_extrainfo = svc_elem.get("extrainfo", "") if svc_elem is not None else ""
+            svc_tunnel  = svc_elem.get("tunnel", "") if svc_elem is not None else ""
+            conf_str    = svc_elem.get("conf", "3") if svc_elem is not None else "3"
 
             raw_ports.append({
-                "port":     port_num,
-                "protocol": protocol,
-                "state":    state,
-                "service":  svc_name,
-                "version":  svc_str,
-                "tunnel":   svc_tunnel,
-                "conf":     svc_conf,
+                "port":      port_num,
+                "protocol":  protocol,
+                "state":     "open",
+                "service":   svc_name,
+                "product":   svc_product,
+                "version":   svc_version,
+                "extrainfo": svc_extrainfo,
+                "tunnel":    svc_tunnel,
             })
 
-            # Confidence based on nmap's service detection confidence (0-10)
             try:
-                conf_int = int(svc_conf)
+                conf_int = int(conf_str)
+                if conf_int >= 8:
+                    confidence = Confidence.HIGH
+                elif conf_int >= 5:
+                    confidence = Confidence.MEDIUM
+                else:
+                    confidence = Confidence.LOW
             except ValueError:
-                conf_int = 0
-            confidence = (
-                Confidence.HIGH   if conf_int >= 8 else
-                Confidence.MEDIUM if conf_int >= 5 else
-                Confidence.LOW
-            )
+                confidence = Confidence.LOW
 
-            # --- Generate informational finding for each open port ---
-            evidence_parts = [f"Port {port_num}/{protocol} is open."]
+            evidence_parts = [f"Port: {port_num}/{protocol} (open)"]
             if svc_name:
                 evidence_parts.append(f"Service: {svc_name}")
-            if svc_str:
-                evidence_parts.append(f"Version: {svc_str} (detection confidence {svc_conf}/10)")
+            if svc_product:
+                version_full = f"{svc_product} {svc_version}".strip()
+                evidence_parts.append(f"Product: {version_full}")
+            if svc_extrainfo:
+                evidence_parts.append(f"Info: {svc_extrainfo}")
             if svc_tunnel:
                 evidence_parts.append(f"Tunnel: {svc_tunnel}")
 
-            # Flag potentially sensitive services
             sensitive_services = {
                 "ssh": ("SSH service exposed", Severity.INFORMATIONAL),
                 "ftp": ("FTP service exposed (potentially insecure)", Severity.LOW),

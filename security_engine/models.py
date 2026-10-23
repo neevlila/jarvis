@@ -97,7 +97,7 @@ class Criticality(str, Enum):
 
 @dataclass
 class Asset:
-    display_name:   str
+    display_name:   str             = ""
     asset_type:     AssetType       = AssetType.UNKNOWN
     ip_address:     str | None      = None
     hostname:       str | None      = None
@@ -109,6 +109,7 @@ class Asset:
     criticality:    Criticality     = Criticality.MEDIUM
     discovery_source: str           = "manual"
     tags:           list[str]       = field(default_factory=list)
+    metadata:       dict[str, Any]  = field(default_factory=dict)
     first_seen:     float           = field(default_factory=time.time)
     last_seen:      float           = field(default_factory=time.time)
     id:             str             = field(default_factory=lambda: str(uuid.uuid4()))
@@ -128,6 +129,7 @@ class Asset:
             "criticality":      self.criticality.value,
             "discovery_source": self.discovery_source,
             "tags":             self.tags,
+            "metadata":         self.metadata,
             "first_seen":       self.first_seen,
             "last_seen":        self.last_seen,
         }
@@ -148,6 +150,7 @@ class Asset:
         obj.criticality      = Criticality(d.get("criticality", "medium"))
         obj.discovery_source = d.get("discovery_source", "manual")
         obj.tags             = d.get("tags", [])
+        obj.metadata         = d.get("metadata", {})
         obj.first_seen       = d.get("first_seen", time.time())
         obj.last_seen        = d.get("last_seen", time.time())
         return obj
