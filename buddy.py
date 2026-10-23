@@ -123,7 +123,7 @@ from geolocation_engine import (
     IPValidator,
     default_geolocation_service
 )
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
 import logging
 
@@ -619,12 +619,50 @@ def analyze_project_api():
     if not assistant_ref or not hasattr(assistant_ref, 'intelligence'):
         return jsonify({'success': False, 'error': 'Intelligence subsystem not initialized'}), 503
     data = request.get_json() or {}
-    project_path = data.get('project_path', '.')
+    target = (data.get('project_path') or '').strip()
+
+    # Reject '.' or empty or non-GitHub URLs
+    if not target or target == '.' or not re.match(r'^https?://github\.com/[^/\s]+/[^/\s]+', target):
+        return jsonify({
+            'success': False,
+            'error': 'Please enter a valid GitHub repository URL (e.g., https://github.com/owner/repo)'
+        }), 400
+
+    repo_url = target.rstrip('/')
+    clone_url = repo_url if repo_url.endswith('.git') else repo_url + '.git'
+
+    temp_dir = tempfile.mkdtemp(prefix='jarvis_repo_')
     try:
-        report = assistant_ref.intelligence.analyze_project(project_path)
-        return jsonify({'success': True, 'report': report.to_dict()})
+        clone_proc = subprocess.run(
+            ['git', 'clone', '--depth', '1', clone_url, temp_dir],
+            capture_output=True,
+            text=True,
+            timeout=50
+        )
+        if clone_proc.returncode != 0:
+            err_msg = clone_proc.stderr.strip() or 'Failed to clone repository. Please verify the URL is public and valid.'
+            return jsonify({'success': False, 'error': f'Git clone error: {err_msg}'}), 400
+
+        report = assistant_ref.intelligence.analyze_project(temp_dir)
+        report_data = report.to_dict()
+        report_data['project_path'] = repo_url
+        return jsonify({'success': True, 'report': report_data})
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Repository clone timed out. The repository may be too large or network is slow.'}), 408
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        def _force_rm(action, name, exc):
+            import stat
+            try:
+                os.chmod(name, stat.S_IWRITE)
+                os.remove(name)
+            except Exception:
+                pass
+        try:
+            shutil.rmtree(temp_dir, onerror=_force_rm)
+        except Exception:
+            pass
 
 @app.route('/api/intelligence/decompose_goal', methods=['POST'])
 def decompose_goal_api():
@@ -1108,10 +1146,26 @@ def open_file_api():
     if not os.path.exists(abs_target):
         return jsonify({'error': 'File not found'}), 404
     try:
-        os.startfile(abs_target)
-        return jsonify({'success': True})
+        if hasattr(os, 'startfile'):
+            os.startfile(abs_target)
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Direct opening is only available on desktop. Please use the Download button on cloud.'}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/download_file', methods=['GET'])
+def download_file_api():
+    filename = request.args.get('filename', '').strip()
+    if not filename or '/' in filename or '\\' in filename or '..' in filename:
+        return jsonify({'error': 'Invalid filename specified.'}), 400
+    
+    workspace_dir = os.path.abspath(os.path.dirname(__file__))
+    target_path = os.path.join(workspace_dir, filename)
+    if not os.path.exists(target_path) or not os.path.isfile(target_path):
+        return jsonify({'error': 'File not found.'}), 404
+        
+    return send_file(target_path, as_attachment=True, download_name=filename)
 
 def extract_json_data(res_text):
     text_stripped = res_text.strip()

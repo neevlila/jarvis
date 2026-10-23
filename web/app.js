@@ -538,8 +538,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const pptInputGroup = document.getElementById('ppt-input-group');
     const pptResultGroup = document.getElementById('ppt-result-group');
     const pptSavedPath = document.getElementById('ppt-saved-path');
+    const pptDownloadBtn = document.getElementById('ppt-download-btn');
     const pptOpenBtn = document.getElementById('ppt-open-btn');
     const pptResetBtn = document.getElementById('ppt-reset-btn');
+    let generatedPptPath = '';
+    let generatedPptFilename = '';
 
     const btnPptCard = document.getElementById('btn-ppt');
     if (btnPptCard) {
@@ -627,7 +630,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data.success) {
                 generatedPptPath = data.path;
-                pptSavedPath.innerText = `Saved locally: ${data.filename}`;
+                generatedPptFilename = data.filename;
+                pptSavedPath.innerText = `Deck Ready: ${data.filename}`;
                 pptInputGroup.style.display = 'none';
                 pptResultGroup.style.display = 'flex';
                 appendLog('JARVIS', `PowerPoint deck successfully generated: ${data.filename}`, 'assistant-log');
@@ -643,14 +647,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    if (pptDownloadBtn) {
+        pptDownloadBtn.addEventListener('click', () => {
+            if (!generatedPptFilename) return;
+            window.location.href = `${apiBase}/api/download_file?filename=${encodeURIComponent(generatedPptFilename)}`;
+        });
+    }
+
     pptOpenBtn.addEventListener('click', async () => {
         if (!generatedPptPath) return;
         try {
-            await fetch(`${apiBase}/api/open_file`, {
+            const res = await fetch(`${apiBase}/api/open_file`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path: generatedPptPath })
             });
+            const d = await res.json();
+            if (!d.success && d.error) {
+                alert(d.error);
+            }
         } catch (e) {
             console.error(e);
         }
@@ -1115,7 +1130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnIdeaEngine) btnIdeaEngine.classList.remove('active');
         if (btnIntelligence) btnIntelligence.classList.remove('active');
         if (viewDashboard) viewDashboard.style.display = 'none';
-        if (viewCodeAssistant) viewCodeAssistant.style.display = 'none';
+        if (viewCodeAssistant) {
+            viewCodeAssistant.style.display = 'none';
+            viewCodeAssistant.classList.remove('view-active');
+        }
         if (viewIdeaEngine) viewIdeaEngine.style.display = 'none';
         if (viewIntelligence) viewIntelligence.style.display = 'none';
     }
@@ -1124,12 +1142,17 @@ document.addEventListener('DOMContentLoaded', () => {
         btnDashboard.addEventListener('click', () => {
             deactivateAllNavs();
             btnDashboard.classList.add('active');
-            viewDashboard.style.display = 'grid';
+            viewDashboard.style.display = 'flex';
             
             // Restore right panel and console footer
-            document.querySelector('.right-panel').style.display = 'flex';
-            document.querySelector('.console-footer').style.display = 'flex';
-            document.querySelector('.dashboard-container').style.gridTemplateColumns = '280px 1fr 340px';
+            const rightPanel = document.querySelector('.right-panel');
+            if (rightPanel) rightPanel.style.display = 'flex';
+            const consoleFooter = document.querySelector('.console-footer');
+            if (consoleFooter) consoleFooter.style.display = 'flex';
+            const dashboardContainer = document.querySelector('.dashboard-container');
+            if (dashboardContainer) {
+                dashboardContainer.style.gridTemplateColumns = window.innerWidth <= 960 ? '1fr' : '280px 1fr 340px';
+            }
         });
     }
 
@@ -1137,12 +1160,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCodeAssistant.addEventListener('click', () => {
             deactivateAllNavs();
             btnCodeAssistant.classList.add('active');
-            viewCodeAssistant.style.display = 'grid';
+            viewCodeAssistant.classList.add('view-active');
+            viewCodeAssistant.style.display = (window.innerWidth <= 960) ? 'flex' : 'grid';
             
             // Hide right panel and console footer
-            document.querySelector('.right-panel').style.display = 'none';
-            document.querySelector('.console-footer').style.display = 'none';
-            document.querySelector('.dashboard-container').style.gridTemplateColumns = '280px 1fr';
+            const rightPanel = document.querySelector('.right-panel');
+            if (rightPanel) rightPanel.style.display = 'none';
+            const consoleFooter = document.querySelector('.console-footer');
+            if (consoleFooter) consoleFooter.style.display = 'none';
+            const dashboardContainer = document.querySelector('.dashboard-container');
+            if (dashboardContainer) {
+                dashboardContainer.style.gridTemplateColumns = (window.innerWidth <= 960) ? '1fr' : '280px 1fr';
+            }
         });
     }
 
@@ -2594,29 +2623,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnScanProject) {
         btnScanProject.addEventListener('click', async () => {
-            const scanPath = (projectScanPath ? projectScanPath.value.trim() : '') || '.';
+            const rawUrl = projectScanPath ? projectScanPath.value.trim() : '';
+            if (!rawUrl || rawUrl === '.' || !/^https?:\/\/github\.com\/[^\/\s]+\/[^\/\s]+/i.test(rawUrl)) {
+                alert('Please enter a valid GitHub repository URL (e.g., https://github.com/owner/repo)');
+                if (projectScanPath) projectScanPath.focus();
+                return;
+            }
+
             btnScanProject.disabled = true;
-            btnScanProject.innerText = 'SCANNING REPO...';
+            btnScanProject.innerText = 'CLONING & SCANNING...';
 
             try {
                 const res = await fetch(`${apiBase}/api/intelligence/analyze_project`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ project_path: scanPath })
+                    body: JSON.stringify({ project_path: rawUrl })
                 });
                 const data = await res.json();
                 if (data.success && data.report) {
                     renderProjectReport(data.report);
-                    appendLog('INTELLIGENCE', `Codebase scan completed. Overall Health: ${data.report.scores.overall}/100`, 'assistant-log');
+                    appendLog('INTELLIGENCE', `GitHub scan completed for ${rawUrl}. Overall Health: ${data.report.scores.overall}/100`, 'assistant-log');
                 } else {
-                    alert(`Scan failed: ${data.error || 'Unknown error'}`);
+                    alert(`Scan failed: ${data.error || 'Please enter a valid GitHub repository URL (e.g., https://github.com/owner/repo)'}`);
                 }
             } catch (err) {
                 console.error(err);
                 alert('Failed to connect to Intelligence API for project inspection.');
             } finally {
                 btnScanProject.disabled = false;
-                btnScanProject.innerText = 'INSPECT HEALTH';
+                btnScanProject.innerText = 'INSPECT GITHUB REPO';
             }
         });
     }
@@ -3145,27 +3180,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (seoResetBtn) seoResetBtn.style.display = 'none';
 
         const keyword = seoKeywordInput ? seoKeywordInput.value.trim() : '';
-        let targetVal = '';
-        let endpoint = '';
-        let requestBody = {};
-
-        if (currentSeoMode === 'url') {
-            targetVal = seoUrlInput ? seoUrlInput.value.trim() : '';
-            if (!targetVal) {
-                showSeoError('Please enter a valid website URL to analyze.');
-                return;
-            }
-            if (!targetVal.startsWith('http://') && !targetVal.startsWith('https://')) {
-                targetVal = 'https://' + targetVal;
-                if (seoUrlInput) seoUrlInput.value = targetVal;
-            }
-            endpoint = `${apiBase}/api/seo/analyze`;
-            requestBody = { url: targetVal, target_keyword: keyword, use_llm: true };
-        } else {
-            targetVal = seoProjectPathInput ? seoProjectPathInput.value.trim() : '.';
-            endpoint = `${apiBase}/api/seo/analyze_project`;
-            requestBody = { project_path: targetVal, target_keyword: keyword, use_llm: true };
+        let targetVal = seoUrlInput ? seoUrlInput.value.trim() : '';
+        if (!targetVal) {
+            showSeoError('Please enter a valid website URL to analyze.');
+            return;
         }
+        if (!targetVal.startsWith('http://') && !targetVal.startsWith('https://')) {
+            targetVal = 'https://' + targetVal;
+            if (seoUrlInput) seoUrlInput.value = targetVal;
+        }
+        let endpoint = `${apiBase}/api/seo/analyze`;
+        let requestBody = { url: targetVal, target_keyword: keyword, use_llm: true };
 
         // Show Analyzing State
         if (seoAnalyzingState) seoAnalyzingState.style.display = 'flex';
@@ -3208,7 +3233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (seoAnalyzingState) seoAnalyzingState.style.display = 'none';
             if (seoAnalyzeBtn) {
                 seoAnalyzeBtn.disabled = false;
-                seoAnalyzeBtn.innerText = currentSeoMode === 'url' ? 'ANALYZE WEBSITE' : 'INSPECT PROJECT';
+                seoAnalyzeBtn.innerText = 'ANALYZE WEBSITE';
             }
 
             if (data.success && data.report) {
@@ -3224,7 +3249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (seoAnalyzingState) seoAnalyzingState.style.display = 'none';
             if (seoAnalyzeBtn) {
                 seoAnalyzeBtn.disabled = false;
-                seoAnalyzeBtn.innerText = currentSeoMode === 'url' ? 'ANALYZE WEBSITE' : 'INSPECT PROJECT';
+                seoAnalyzeBtn.innerText = 'ANALYZE WEBSITE';
             }
             playErrorBeep();
             showSeoError(`Network communication error: ${err.message}`);

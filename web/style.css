@@ -1908,4 +1908,53 @@ body::before {
     transform: translateY(0);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Code Assistant Responsive Viewport & Multi-screen Layout
+   ───────────────────────────────────────────────────────────────────────────── */
+.view-code-assistant-layout {
+    display: none;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 20px;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.view-code-assistant-layout.view-active {
+    display: grid;
+}
+
+@media (max-width: 960px) {
+    .view-code-assistant-layout {
+        display: none;
+        flex-direction: column !important;
+        gap: 16px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        padding-bottom: 24px;
+        box-sizing: border-box;
+    }
+
+    .view-code-assistant-layout.view-active {
+        display: flex !important;
+    }
+
+    .code-assistant-chat {
+        min-height: 320px !important;
+        flex-shrink: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .code-assistant-editor {
+        min-height: 480px !important;
+        flex-shrink: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+}
+
+
 

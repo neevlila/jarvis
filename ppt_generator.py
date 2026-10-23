@@ -554,6 +554,173 @@ def get_fallback_slide_deck(topic, slide_count, slide_titles, contents):
         })
     return slides
 
+
+def _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
+    """
+    Cross-platform .pptx slide deck generator using pure python-pptx.
+    Requires zero OS-level PowerPoint or Node.js dependencies.
+    """
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches, Pt
+        from pptx.dml.color import RGBColor
+        from pptx.enum.text import PP_ALIGN
+        from pptx.enum.shapes import MSO_SHAPE
+    except ImportError:
+        return False
+
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+
+    def hex_to_rgb(hex_str):
+        hex_str = str(hex_str).lstrip('#')
+        if len(hex_str) == 6:
+            return RGBColor(int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
+        return RGBColor(0, 210, 255)
+
+    bg_hex = theme.get('background_gradient', {}).get('start', '#07090D')
+    primary_color = hex_to_rgb(theme.get('text', {}).get('primary', '#00D2FF'))
+    secondary_color = hex_to_rgb(theme.get('text', {}).get('secondary', '#8DA4B4'))
+    accent_color = hex_to_rgb(theme.get('accent', '#00FFCC'))
+    bg_color = hex_to_rgb(bg_hex)
+    card_bg_color = hex_to_rgb('#0C1522')
+    card_border_color = hex_to_rgb('#005F73')
+
+    title_font = theme.get('fonts', {}).get('title', 'Outfit')
+    body_font = theme.get('fonts', {}).get('body', 'Outfit')
+    blank_layout = prs.slide_layouts[6]
+
+    def set_slide_background(slide):
+        bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = bg_color
+        bg.line.fill.background()
+
+    # 1. Cover
+    cover = prs.slides.add_slide(blank_layout)
+    set_slide_background(cover)
+
+    accent_bar = cover.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1.2), Inches(2.1), Inches(1.8), Inches(0.08))
+    accent_bar.fill.solid()
+    accent_bar.fill.fore_color.rgb = accent_color
+    accent_bar.line.fill.background()
+
+    tb = cover.shapes.add_textbox(Inches(1.2), Inches(2.4), Inches(10.8), Inches(2.5))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = str(topic).upper()
+    p.font.name = title_font
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = primary_color
+
+    p_sub = tf.add_paragraph()
+    p_sub.text = 'AUTONOMOUS SYSTEM EXECUTIVE SUMMARY & ARCHITECTURE DECK'
+    p_sub.font.name = body_font
+    p_sub.font.size = Pt(15)
+    p_sub.font.color.rgb = secondary_color
+    p_sub.space_before = Pt(14)
+
+    # 2. Content Slides
+    for idx, item in enumerate(slides_data, start=2):
+        s = prs.slides.add_slide(blank_layout)
+        set_slide_background(s)
+
+        v_bar = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.8), Inches(0.7), Inches(0.08), Inches(0.9))
+        v_bar.fill.solid()
+        v_bar.fill.fore_color.rgb = accent_color
+        v_bar.line.fill.background()
+
+        stb = s.shapes.add_textbox(Inches(1.05), Inches(0.6), Inches(11.4), Inches(1.1))
+        stf = stb.text_frame
+        stf.word_wrap = True
+        sp = stf.paragraphs[0]
+        sp.text = str(item.get('title', f'Slide {idx}'))
+        sp.font.name = title_font
+        sp.font.size = Pt(28)
+        sp.font.bold = True
+        sp.font.color.rgb = primary_color
+
+        if item.get('subtitle'):
+            sp2 = stf.add_paragraph()
+            sp2.text = str(item.get('subtitle', ''))
+            sp2.font.name = body_font
+            sp2.font.size = Pt(13)
+            sp2.font.color.rgb = secondary_color
+
+        content = item.get('content', {})
+        items = []
+        if isinstance(content, dict):
+            if 'points' in content and isinstance(content['points'], list):
+                items = content['points']
+            elif 'cards' in content and isinstance(content['cards'], list):
+                for c in content['cards']:
+                    if isinstance(c, dict):
+                        items.append(f"{c.get('heading') or c.get('title') or ''}: {c.get('body') or c.get('desc') or ''}".strip(': '))
+                    else:
+                        items.append(str(c))
+            elif 'stats' in content and isinstance(content['stats'], list):
+                for st in content['stats']:
+                    if isinstance(st, dict):
+                        items.append(f"{st.get('value', '')} — {st.get('label', '')}")
+                    else:
+                        items.append(str(st))
+            elif 'left_col' in content and 'right_col' in content:
+                items = (content.get('left_col') or []) + (content.get('right_col') or [])
+        elif isinstance(content, list):
+            items = content
+        elif isinstance(content, str):
+            items = [content]
+
+        if not items:
+            items = [f'Detailed analysis and strategy for {item.get("title", topic)}.']
+
+        card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(2.0), Inches(11.7), Inches(4.7))
+        card.fill.solid()
+        card.fill.fore_color.rgb = card_bg_color
+        card.line.color.rgb = card_border_color
+        card.line.width = Pt(1)
+
+        ctb = s.shapes.add_textbox(Inches(1.2), Inches(2.2), Inches(10.9), Inches(4.3))
+        ctf = ctb.text_frame
+        ctf.word_wrap = True
+
+        for p_i, text_line in enumerate(items[:6]):
+            cp = ctf.paragraphs[0] if p_i == 0 else ctf.add_paragraph()
+            clean_text = str(text_line).strip().lstrip('•-* ').strip()
+            cp.text = f'•  {clean_text}'
+            cp.font.name = body_font
+            cp.font.size = Pt(16)
+            cp.font.color.rgb = secondary_color
+            cp.space_after = Pt(12)
+
+    # 3. Conclusion Slide
+    final_slide = prs.slides.add_slide(blank_layout)
+    set_slide_background(final_slide)
+
+    ftb = final_slide.shapes.add_textbox(Inches(1.5), Inches(2.8), Inches(10.3), Inches(2.0))
+    ftf = ftb.text_frame
+    fp = ftf.paragraphs[0]
+    fp.text = 'PRESENTATION COMPLETE'
+    fp.alignment = PP_ALIGN.CENTER
+    fp.font.name = title_font
+    fp.font.size = Pt(40)
+    fp.font.bold = True
+    fp.font.color.rgb = primary_color
+
+    fp2 = ftf.add_paragraph()
+    fp2.text = f'GENERATED BY J.A.R.V.I.S. // TOPIC: {str(topic).upper()}'
+    fp2.alignment = PP_ALIGN.CENTER
+    fp2.font.name = body_font
+    fp2.font.size = Pt(14)
+    fp2.font.color.rgb = accent_color
+    fp2.space_before = Pt(12)
+
+    prs.save(out_path)
+    return True
+
 def _compile_ppt_via_html(topic, slides_data, theme, out_path):
     import shutil
     import subprocess
@@ -936,7 +1103,16 @@ def generate_ppt_custom(topic, slide_count, slide_titles=None, theme=None, exist
             "accent": "#00FFCC"
         }
 
-    # Try HTML Slide Compiler compilation first
+    # 1. Try python-pptx (pure Python, cross-platform, Linux/Render compatible)
+    try:
+        print("Attempting slide generation via python-pptx engine...")
+        if _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
+            print(f"Presentation successfully compiled via python-pptx: {out_path}")
+            return out_path
+    except Exception as e:
+        print(f"python-pptx engine notice: {e}")
+
+    # 2. Try HTML Slide Compiler
     try:
         print("Attempting slide generation via HTML Layout Compiler...")
         compiled = _compile_ppt_via_html(topic, slides_data, theme, out_path)
@@ -944,9 +1120,13 @@ def generate_ppt_custom(topic, slide_count, slide_titles=None, theme=None, exist
             print(f"Presentation successfully compiled via HTML layout engine: {out_path}")
             return out_path
     except Exception as e:
-        print(f"HTML Slide Compiler failed ({e}). Falling back to win32com PowerPoint application...")
-            
-    app = win32.Dispatch("PowerPoint.Application")
+        print(f"HTML Slide Compiler failed ({e}). Checking Windows COM...")
+
+    # 3. Fallback to win32com ONLY if on Windows with Dispatch available
+    if win32 is not None and hasattr(win32, 'Dispatch'):
+        app = win32.Dispatch("PowerPoint.Application")
+    else:
+        raise RuntimeError("PowerPoint generation requires python-pptx on Linux/Render or Microsoft PowerPoint on Windows.")
     app.Visible = True
         
     primary_color = _hex_to_rgb(theme["text"]["primary"])

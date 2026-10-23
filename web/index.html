@@ -248,7 +248,7 @@
             </div>
             
             <!-- View 2: Code Assistant -->
-            <div id="view-code-assistant" style="display: none; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; height: 100%; min-height: 0;">
+            <div id="view-code-assistant" class="view-code-assistant-layout" style="display: none; height: 100%; min-height: 0;">
                 <!-- Chat / Prompt Pane -->
                 <div class="code-assistant-chat" style="display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; min-height: 0;">
                     <h3 style="margin-bottom: 12px; font-size: 0.8rem; color: var(--accent-color); letter-spacing: 2px;">CODE INSTRUCTIONS</h3>
@@ -529,8 +529,8 @@
                     <!-- 1. Project Analyzer Tab -->
                     <div id="intel-panel-project" class="intel-panel" style="display: flex; flex-direction: column; gap: 16px;">
                         <div style="display: flex; gap: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; align-items: center;">
-                            <input type="text" id="project-scan-path" placeholder="Local project directory path (default: current workspace)" value="." style="flex: 1; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.8rem; font-family: var(--font-mono);">
-                            <button class="control-btn" id="btn-scan-project" style="padding: 10px 20px; font-weight: bold; letter-spacing: 1px;">INSPECT HEALTH</button>
+                            <input type="text" id="project-scan-path" placeholder="GitHub Repository URL (e.g. https://github.com/owner/repo)" value="" style="flex: 1; background: rgba(0, 20, 30, 0.6); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.8rem; font-family: var(--font-mono);">
+                            <button class="control-btn" id="btn-scan-project" style="padding: 10px 20px; font-weight: bold; letter-spacing: 1px;">INSPECT GITHUB REPO</button>
                         </div>
 
                         <div id="project-report-container" style="display: none; flex-direction: column; gap: 16px;">
@@ -790,9 +790,10 @@
                     </div>
                     <h3 style="color: var(--success-color); letter-spacing: 1px;">SLIDES BUILT SUCCESSFULLY</h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); word-break: break-all; line-height: 1.4;" id="ppt-saved-path">Saved locally to: C:\Users\hp\...</p>
-                    <div class="modal-actions" style="width: 100%; margin-top: 6px;">
-                        <button class="control-btn" id="ppt-open-btn">OPEN PPT FILE</button>
-                        <button class="control-btn btn-secondary" id="ppt-reset-btn">GENERATE ANOTHER</button>
+                    <div class="modal-actions" style="width: 100%; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="control-btn" id="ppt-download-btn" style="flex: 1; min-width: 140px;">DOWNLOAD .PPTX</button>
+                        <button class="control-btn btn-secondary" id="ppt-open-btn" style="flex: 1; min-width: 120px;">OPEN LOCALLY</button>
+                        <button class="control-btn btn-secondary" id="ppt-reset-btn" style="flex: 1; min-width: 140px;">GENERATE ANOTHER</button>
                     </div>
                 </div>
             </div>
@@ -1132,24 +1133,15 @@
                 <div id="seo-input-section" style="display: flex; flex-direction: column; gap: 14px; background: rgba(0, 15, 25, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--accent-color); font-weight: bold;">AUDIT TARGET SPECIFICATION</span>
-                        <!-- Mode Selector Pill -->
-                        <div style="display: flex; gap: 4px; background: rgba(0, 20, 30, 0.8); border: 1px solid var(--border-color); border-radius: 6px; padding: 3px;">
-                            <button id="seo-mode-url-btn" class="mem-filter-btn active" style="padding: 3px 10px; font-size: 0.65rem;">PUBLIC URL</button>
-                            <button id="seo-mode-project-btn" class="mem-filter-btn" style="padding: 3px 10px; font-size: 0.65rem;">LOCAL PROJECT</button>
-                        </div>
+                        <span style="font-size: 0.65rem; font-family: var(--font-mono); color: var(--text-muted); padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 4px;">PUBLIC URL AUDIT</span>
                     </div>
 
-                    <!-- URL / Project Input Row -->
+                    <!-- URL Input Row -->
                     <div id="seo-url-input-group" style="display: flex; flex-direction: column; gap: 6px;">
                         <label for="seo-url-input" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px;">WEBSITE URL (HTTPS PREFERRED)</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="seo-url-input" placeholder="https://example.com" value="https://example.com" style="flex: 1; background: rgba(0, 20, 30, 0.7); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.85rem; font-family: var(--font-mono);">
                         </div>
-                    </div>
-
-                    <div id="seo-project-input-group" style="display: none; flex-direction: column; gap: 6px;">
-                        <label for="seo-project-path-input" style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px;">LOCAL PROJECT DIRECTORY OR FILE PATH</label>
-                        <input type="text" id="seo-project-path-input" placeholder="." value="." style="width: 100%; background: rgba(0, 20, 30, 0.7); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 6px; outline: none; font-size: 0.85rem; font-family: var(--font-mono);">
                     </div>
 
                     <!-- Target Keyword & AI Toggle Grid -->
