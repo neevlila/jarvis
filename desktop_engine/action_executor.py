@@ -9,7 +9,10 @@ import time
 import os
 import subprocess
 from typing import Dict, Any, Optional, Union, Tuple
-import pyautogui
+try:
+    import pyautogui
+except Exception:
+    pyautogui = None
 
 from desktop_engine.coordinates import Point
 from desktop_engine.models import ActionDecision, ValidationResult, ExecutionResult

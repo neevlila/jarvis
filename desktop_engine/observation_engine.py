@@ -6,7 +6,10 @@ screenshot files, and hardware metrics.
 
 import os
 import time
-import pyautogui
+try:
+    import pyautogui
+except Exception:
+    pyautogui = None
 import psutil
 from typing import Optional, Dict, Any
 

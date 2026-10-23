@@ -12,7 +12,10 @@ Ensures all visual detections are accurately converted into consistent Screen-sp
 import os
 from typing import List, Dict, Any, Optional
 from PIL import Image
-import pyautogui
+try:
+    import pyautogui
+except Exception:
+    pyautogui = None
 
 from desktop_engine.coordinates import (
     BoundingBox,
