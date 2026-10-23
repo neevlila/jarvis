@@ -129,6 +129,19 @@ import logging
 
 app = Flask(__name__, static_folder='web', static_url_path='')
 
+# ── Security Assessment Engine ────────────────────────────────────────────────
+try:
+    from security_engine.api import init_security_engine
+    init_security_engine(app)
+    logger.info("Security Assessment Engine registered.")
+except Exception as _sec_exc:
+    # Non-fatal: log and continue.  Security routes will return 503.
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Security engine failed to initialise (non-fatal): %s", _sec_exc
+    )
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ── CORS: support localhost dev + Render production domain ────────────────────
 import os as _os
 _render_url = _os.environ.get("RENDER_EXTERNAL_URL", "")
