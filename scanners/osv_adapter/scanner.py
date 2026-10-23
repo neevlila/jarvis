@@ -117,61 +117,110 @@ class OSVScanner(ScannerBase):
         packages: list[dict] = raw.get("packages", [])
         project_path: str | None = raw.get("project_path")
         unsupported_files: list[str] = []
+        temp_dir: str | None = None
 
-        # Parse lockfiles if a project path was provided
-        if project_path and not packages:
-            packages, unsupported_files = self._collect_packages(project_path)
+        target_str = (job.target or "").strip()
+        if not packages and not project_path and target_str:
+            if re.match(r"^https?://github\.com/[^/\s]+/[^/\s]+", target_str):
+                import tempfile
+                import subprocess
+                repo_url = target_str.rstrip("/")
+                clone_url = repo_url if repo_url.endswith(".git") else repo_url + ".git"
+                temp_dir = tempfile.mkdtemp(prefix="jarvis_osv_repo_")
+                try:
+                    clone_proc = subprocess.run(
+                        ["git", "clone", "--depth", "1", clone_url, temp_dir],
+                        capture_output=True,
+                        text=True,
+                        timeout=40,
+                    )
+                    if clone_proc.returncode == 0:
+                        project_path = temp_dir
+                    else:
+                        unsupported_files.append(
+                            f"Git clone error: {clone_proc.stderr.strip() or 'Failed to clone repository.'}"
+                        )
+                except Exception as clone_exc:
+                    unsupported_files.append(f"Git clone exception: {clone_exc}")
+            elif os.path.exists(target_str):
+                project_path = target_str
+            elif target_str.startswith(("http://", "https://")):
+                return ScanResult(
+                    scanner_name=self.name,
+                    scan_job_id=job.id,
+                    success=False,
+                    error=(
+                        f"Target '{target_str}' is a deployed web application without public dependency lockfiles. "
+                        "For web security assessment (headers, SSL/TLS, clickjacking, cookie security), "
+                        "please select the 'Web Baseline' assessment profile. "
+                        "For Dependency Audit, provide a GitHub repository URL (e.g. https://github.com/owner/repo) or a project lockfile."
+                    ),
+                    warnings=unsupported_files,
+                )
 
-        if not packages:
+        try:
+            # Parse lockfiles if a project path was provided
+            if project_path and not packages:
+                packages, collected_notes = self._collect_packages(project_path)
+                unsupported_files.extend(collected_notes)
+
+            if not packages:
+                return ScanResult(
+                    scanner_name=self.name,
+                    scan_job_id=job.id,
+                    success=False,
+                    error=(
+                        "No dependencies found to scan. Provide a 'packages' list, a GitHub repository URL, "
+                        "or a project path containing a supported lockfile (e.g. requirements.txt, package-lock.json)."
+                    ),
+                    warnings=unsupported_files,
+                )
+
+            # Query OSV in batches
+            all_findings: list[Finding] = []
+            warnings = list(unsupported_files)
+            total = len(packages)
+            processed = 0
+
+            for batch_start in range(0, total, _MAX_PACKAGES_PER_BATCH):
+                batch = packages[batch_start: batch_start + _MAX_PACKAGES_PER_BATCH]
+                elapsed = time.monotonic() - start
+                if elapsed > timeout_s - 5:
+                    warnings.append(
+                        f"Timeout approaching — stopped after {processed}/{total} packages."
+                    )
+                    break
+                try:
+                    batch_findings, batch_warnings = self._query_batch(batch, job.id, job.target)
+                    all_findings.extend(batch_findings)
+                    warnings.extend(batch_warnings)
+                except Exception as exc:
+                    warnings.append(f"Batch {batch_start//100 + 1} failed: {exc}")
+                processed += len(batch)
+
+            duration = time.monotonic() - start
+            logger.info(
+                "OSV scan complete: job=%s packages=%d findings=%d duration=%.1fs",
+                job.id, total, len(all_findings), duration
+            )
+
             return ScanResult(
                 scanner_name=self.name,
                 scan_job_id=job.id,
-                success=False,
-                error=(
-                    "No packages to scan. Provide a 'packages' list or a 'project_path' "
-                    "containing a supported lockfile."
-                ),
-                warnings=unsupported_files,
+                success=True,
+                findings=all_findings,
+                raw_output={"packages_scanned": total, "unsupported_files": unsupported_files},
+                warnings=warnings,
+                duration_s=duration,
+                scanner_version="OSV.dev API v1",
             )
-
-        # Query OSV in batches
-        all_findings: list[Finding] = []
-        warnings = list(unsupported_files)
-        total = len(packages)
-        processed = 0
-
-        for batch_start in range(0, total, _MAX_PACKAGES_PER_BATCH):
-            batch = packages[batch_start: batch_start + _MAX_PACKAGES_PER_BATCH]
-            elapsed = time.monotonic() - start
-            if elapsed > timeout_s - 5:
-                warnings.append(
-                    f"Timeout approaching — stopped after {processed}/{total} packages."
-                )
-                break
-            try:
-                batch_findings, batch_warnings = self._query_batch(batch, job.id, job.target)
-                all_findings.extend(batch_findings)
-                warnings.extend(batch_warnings)
-            except Exception as exc:
-                warnings.append(f"Batch {batch_start//100 + 1} failed: {exc}")
-            processed += len(batch)
-
-        duration = time.monotonic() - start
-        logger.info(
-            "OSV scan complete: job=%s packages=%d findings=%d duration=%.1fs",
-            job.id, total, len(all_findings), duration
-        )
-
-        return ScanResult(
-            scanner_name=self.name,
-            scan_job_id=job.id,
-            success=True,
-            findings=all_findings,
-            raw_output={"packages_scanned": total, "unsupported_files": unsupported_files},
-            warnings=warnings,
-            duration_s=duration,
-            scanner_version="OSV.dev API v1",
-        )
+        finally:
+            if temp_dir and os.path.exists(temp_dir):
+                import shutil
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except Exception:
+                    pass
 
     # ── Lockfile parsers ──────────────────────────────────────────────────────
 

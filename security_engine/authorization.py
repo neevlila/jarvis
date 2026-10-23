@@ -106,22 +106,35 @@ def _extract_hostname_or_ip(target: str) -> str:
 def _target_in_scope(target: str, scope: AuthorizedScope) -> bool:
     """
     Check whether target is covered by at least one entry in scope.targets.
-    Supports exact match, wildcard prefix (*.example.com), and CIDR notation.
+    Supports exact match, URL normalization, host matching, wildcard prefix (*.example.com), and CIDR notation.
     """
-    host = _extract_hostname_or_ip(target)
+    target_clean = target.strip()
+    host = _extract_hostname_or_ip(target_clean)
     for allowed in scope.targets:
-        allowed = allowed.strip()
-        # Exact match
-        if allowed.lower() == host.lower():
+        allowed_clean = allowed.strip()
+
+        # 1. Exact raw match
+        if allowed_clean.lower() == target_clean.lower():
             return True
-        # Wildcard hostname: *.example.com matches sub.example.com
-        if allowed.startswith("*."):
-            suffix = allowed[2:].lower()
+
+        # 2. Match without trailing slash
+        if allowed_clean.rstrip("/").lower() == target_clean.rstrip("/").lower():
+            return True
+
+        # 3. Match extracted hostname or IP
+        allowed_host = _extract_hostname_or_ip(allowed_clean)
+        if allowed_host and host and allowed_host.lower() == host.lower():
+            return True
+
+        # 4. Wildcard hostname: *.example.com matches sub.example.com
+        if allowed_host.startswith("*."):
+            suffix = allowed_host[2:].lower()
             if host.lower().endswith("." + suffix) or host.lower() == suffix:
                 return True
-        # CIDR block
+
+        # 5. CIDR block (use raw allowed_clean to preserve /prefix)
         try:
-            network = ipaddress.ip_network(allowed, strict=False)
+            network = ipaddress.ip_network(allowed_clean, strict=False)
             ip = ipaddress.ip_address(host)
             if ip in network:
                 return True

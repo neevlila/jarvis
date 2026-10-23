@@ -160,3 +160,14 @@ class TestAuthorizeSccan:
         scope = _make_scope(["example.com"])
         result = authorize_scan("", ScanProfile.DEPENDENCY_AUDIT, scope, from_cloud=True)
         assert not result.allowed
+
+    def test_full_url_target_scope_match(self):
+        # Specific user case: target has full URL and trailing slash
+        scope = _make_scope(["https://neevlila.vercel.app/"], profiles=[ScanProfile.WEB_BASELINE])
+        result = authorize_scan("https://neevlila.vercel.app/", ScanProfile.WEB_BASELINE, scope, from_cloud=True)
+        assert result.allowed
+
+    def test_url_with_or_without_trailing_slash_matches(self):
+        scope = _make_scope(["https://neevlila.vercel.app/"], profiles=[ScanProfile.WEB_BASELINE])
+        result = authorize_scan("https://neevlila.vercel.app", ScanProfile.WEB_BASELINE, scope, from_cloud=True)
+        assert result.allowed
