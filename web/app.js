@@ -1153,23 +1153,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCodeAssistant = document.getElementById('btn-code-assistant');
     const btnIdeaEngine = document.getElementById('btn-idea-engine');
     const btnIntelligence = document.getElementById('btn-intelligence');
+    const btnSecurity = document.getElementById('btn-security');
     const launchIdeaEngineBtn = document.getElementById('launch-idea-engine-btn');
     const viewDashboard = document.getElementById('view-dashboard');
     const viewCodeAssistant = document.getElementById('view-code-assistant');
     const viewIdeaEngine = document.getElementById('view-idea-engine');
     const viewIntelligence = document.getElementById('view-intelligence');
+    const viewSecurity = document.getElementById('view-security');
 
     function deactivateAllNavs() {
         if (btnDashboard) btnDashboard.classList.remove('active');
         if (btnCodeAssistant) btnCodeAssistant.classList.remove('active');
         if (btnIdeaEngine) btnIdeaEngine.classList.remove('active');
         if (btnIntelligence) btnIntelligence.classList.remove('active');
+        if (btnSecurity) btnSecurity.classList.remove('active');
         if (viewDashboard) viewDashboard.style.display = 'none';
         if (viewCodeAssistant) {
             viewCodeAssistant.style.display = 'none';
         }
         if (viewIdeaEngine) viewIdeaEngine.style.display = 'none';
         if (viewIntelligence) viewIntelligence.style.display = 'none';
+        if (viewSecurity) viewSecurity.style.display = 'none';
     }
 
     if (btnDashboard) {
@@ -1249,6 +1253,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnIntelligence) {
         btnIntelligence.addEventListener('click', openIntelligenceView);
+    }
+
+    function openSecurityView() {
+        deactivateAllNavs();
+        if (btnSecurity) btnSecurity.classList.add('active');
+        if (viewSecurity) viewSecurity.style.display = 'flex';
+        
+        const rightPanel = document.querySelector('.right-panel');
+        if (rightPanel) rightPanel.style.display = 'none';
+        const consoleFooter = document.querySelector('.console-footer');
+        if (consoleFooter) consoleFooter.style.display = 'none';
+        const dashboardContainer = document.querySelector('.dashboard-container');
+        if (dashboardContainer) dashboardContainer.style.gridTemplateColumns = '280px 1fr';
+
+        loadSecurityOverview();
+    }
+
+    if (btnSecurity) {
+        btnSecurity.addEventListener('click', openSecurityView);
     }
 
     // Code Assistant Actions
@@ -3541,6 +3564,399 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error copying report:', err);
             }
         });
+    }
+
+
+    // =========================================================================
+    // J.A.R.V.I.S. Defensive Security Assessment Engine Controller
+    // =========================================================================
+    let currentSecTab = 'overview';
+
+    // Sub-nav tab switching
+    const secSubnav = document.getElementById('sec-subnav');
+    if (secSubnav) {
+        secSubnav.querySelectorAll('.intel-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                secSubnav.querySelectorAll('.intel-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.getAttribute('data-sectab');
+                switchSecurityTab(tab);
+            });
+        });
+    }
+
+    function switchSecurityTab(tab) {
+        currentSecTab = tab;
+        document.querySelectorAll('.sec-panel').forEach(p => p.style.display = 'none');
+        const activePanel = document.getElementById(`sec-panel-${tab}`);
+        if (activePanel) activePanel.style.display = 'flex';
+
+        if (tab === 'overview') loadSecurityOverview();
+        else if (tab === 'scans') loadSecurityScans();
+        else if (tab === 'findings') loadSecurityFindings();
+        else if (tab === 'assets') loadSecurityAssets();
+        else if (tab === 'health') loadSecurityHealth();
+    }
+
+    // 1. Overview Loader
+    async function loadSecurityOverview() {
+        try {
+            const res = await fetch(`${apiBase}/api/v1/security/overview`);
+            const data = await res.json();
+            if (!data.success || !data.overview) return;
+            const ov = data.overview;
+
+            const elAssets = document.getElementById('sec-stat-assets');
+            if (elAssets) elAssets.innerText = ov.assets_total || 0;
+
+            const elScans = document.getElementById('sec-stat-scans');
+            if (elScans) elScans.innerText = `${ov.scans_running || 0} / ${ov.scans_total || 0}`;
+
+            const bySev = (ov.findings && ov.findings.by_severity) || {};
+            const elCrit = document.getElementById('sec-stat-critical');
+            if (elCrit) elCrit.innerText = bySev.critical || 0;
+
+            const elHigh = document.getElementById('sec-stat-high');
+            if (elHigh) elHigh.innerText = bySev.high || 0;
+
+            const elRem = document.getElementById('sec-stat-remediations');
+            if (elRem) elRem.innerText = ov.remediations_open || 0;
+
+            // Render severity breakdown
+            const barsContainer = document.getElementById('sec-severity-bars');
+            if (barsContainer) {
+                const total = ov.findings.total || 1;
+                const sevs = [
+                    { key: 'critical', label: 'CRITICAL', color: '#ef4444' },
+                    { key: 'high', label: 'HIGH', color: '#f97316' },
+                    { key: 'medium', label: 'MEDIUM', color: '#eab308' },
+                    { key: 'low', label: 'LOW', color: '#3b82f6' },
+                    { key: 'informational', label: 'INFORMATIONAL', color: '#94a3b8' }
+                ];
+                barsContainer.innerHTML = sevs.map(s => {
+                    const count = bySev[s.key] || 0;
+                    const pct = Math.round((count / (ov.findings.total || 1)) * 100);
+                    return `
+                        <div style="font-size: 0.72rem; font-family: var(--font-mono);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                <span style="color: ${s.color}; font-weight: bold;">${s.label}</span>
+                                <span style="color: var(--text-secondary);">${count} (${pct}%)</span>
+                            </div>
+                            <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${pct}%; height: 100%; background: ${s.color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Load scanners overview list
+            const scRes = await fetch(`${apiBase}/api/v1/security/scanners`);
+            const scData = await scRes.json();
+            const scList = document.getElementById('sec-scanners-overview-list');
+            if (scList && scData.success && scData.scanners) {
+                scList.innerHTML = scData.scanners.map(sc => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(0,20,30,0.3); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.75rem;">
+                        <span style="font-family: var(--font-mono); color: #00d2ff; text-transform: uppercase;">${sc.name}</span>
+                        <span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: ${sc.available ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color: ${sc.available ? '#10b981' : '#ef4444'};">
+                            ${sc.available ? 'ONLINE / READY' : 'UNAVAILABLE / WORKER'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            console.error('Error loading security overview:', e);
+        }
+    }
+
+    // 2. Submit New Scan
+    const btnSubmitScan = document.getElementById('sec-btn-submit-scan');
+    if (btnSubmitScan) {
+        btnSubmitScan.addEventListener('click', async () => {
+            const target = (document.getElementById('sec-input-target')?.value || '').trim();
+            const profile = document.getElementById('sec-select-profile')?.value || 'dependency_audit';
+            const owner = (document.getElementById('sec-input-owner')?.value || 'SecOps Administrator').trim();
+            const isAuthAck = document.getElementById('sec-check-auth')?.checked;
+
+            if (!target) {
+                alert('Please enter a target host, IP, domain, or lockfile path.');
+                return;
+            }
+            if (!isAuthAck) {
+                alert('Authorization acknowledgement checkbox must be checked. Scanning unauthorized systems is strictly prohibited.');
+                return;
+            }
+
+            btnSubmitScan.disabled = true;
+            btnSubmitScan.innerText = 'INITIALIZING SCAN...';
+
+            try {
+                const res = await fetch(`${apiBase}/api/v1/security/scans`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target: target,
+                        profile: profile,
+                        owner: owner,
+                        authorization_acknowledged: true,
+                        initiated_by: 'jarvis_dashboard'
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.job) {
+                    playCompletionChirp();
+                    alert(`Scan initiated successfully. Job ID: ${data.job.id}`);
+                    // Switch to scan jobs tab
+                    const btnScans = document.querySelector('[data-sectab="scans"]');
+                    if (btnScans) btnScans.click();
+                } else {
+                    playErrorBeep();
+                    alert(`Scan submission rejected: ${data.error || 'Unknown error'}`);
+                }
+            } catch (err) {
+                playErrorBeep();
+                alert(`Error submitting scan: ${err.message}`);
+            } finally {
+                btnSubmitScan.disabled = false;
+                btnSubmitScan.innerText = 'INITIATE ASSESSMENT';
+            }
+        });
+    }
+
+    // 3. Scan Jobs Loader
+    const btnRefreshScans = document.getElementById('sec-btn-refresh-scans');
+    if (btnRefreshScans) btnRefreshScans.addEventListener('click', loadSecurityScans);
+
+    async function loadSecurityScans() {
+        const tbody = document.getElementById('sec-scans-tbody');
+        if (!tbody) return;
+        try {
+            const res = await fetch(`${apiBase}/api/v1/security/scans?limit=50`);
+            const data = await res.json();
+            if (!data.success || !data.scans || data.scans.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding: 16px; text-align: center; color: var(--text-secondary);">No scans executed yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.scans.map(j => {
+                const statusColor = {
+                    completed: '#10b981', running: '#38bdf8', pending: '#fbbf24',
+                    failed: '#ef4444', cancelled: '#94a3b8'
+                }[j.status] || '#94a3b8';
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 8px; font-family: var(--font-mono); color: #e2e8f0;">${j.target}</td>
+                        <td style="padding: 8px; color: var(--text-secondary);">${j.profile}</td>
+                        <td style="padding: 8px;"><span style="color: ${statusColor}; font-weight: bold; text-transform: uppercase;">${j.status}</span></td>
+                        <td style="padding: 8px;">
+                            <div style="font-size: 0.68rem; color: var(--text-secondary); margin-bottom: 2px;">${j.progress_pct}% - ${j.progress_msg || ''}</div>
+                            <div style="width: 100px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;">
+                                <div style="width: ${j.progress_pct}%; height: 100%; background: ${statusColor};"></div>
+                            </div>
+                        </td>
+                        <td style="padding: 8px; font-weight: bold; color: #00d2ff;">${(j.result_ids && j.result_ids.length) || 0}</td>
+                        <td style="padding: 8px;">
+                            <a href="${apiBase}/api/v1/security/reports/${j.id}/html" target="_blank" style="color: #38bdf8; text-decoration: none; margin-right: 6px; font-size: 0.7rem;">[HTML]</a>
+                            <a href="${apiBase}/api/v1/security/reports/${j.id}/csv" target="_blank" style="color: #38bdf8; text-decoration: none; font-size: 0.7rem;">[CSV]</a>
+                        </td>
+                        <td style="padding: 8px;">
+                            ${j.status === 'running' || j.status === 'pending' ? `
+                                <button onclick="window.cancelSecurityScan('${j.id}')" style="background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #ef4444; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.68rem;">CANCEL</button>
+                            ` : `<span style="color: var(--text-secondary); font-size: 0.68rem;">${j.duration_s ? j.duration_s + 's' : '–'}</span>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Error loading scans:', e);
+        }
+    }
+
+    window.cancelSecurityScan = async function(jobId) {
+        if (!confirm('Are you sure you want to cancel this scan?')) return;
+        try {
+            await fetch(`${apiBase}/api/v1/security/scans/${jobId}/cancel`, { method: 'POST' });
+            loadSecurityScans();
+        } catch (e) {
+            alert('Failed to cancel scan.');
+        }
+    };
+
+    // 4. Findings & Remediation Loader
+    const btnRefreshFindings = document.getElementById('sec-btn-refresh-findings');
+    if (btnRefreshFindings) btnRefreshFindings.addEventListener('click', loadSecurityFindings);
+
+    const filterSevSelect = document.getElementById('sec-findings-filter-sev');
+    if (filterSevSelect) filterSevSelect.addEventListener('change', loadSecurityFindings);
+
+    async function loadSecurityFindings() {
+        const container = document.getElementById('sec-findings-container');
+        if (!container) return;
+        const sevFilter = filterSevSelect?.value || '';
+        const url = `${apiBase}/api/v1/security/findings?limit=100${sevFilter ? '&severity=' + sevFilter : ''}`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!data.success || !data.findings || data.findings.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 0.75rem;">No security findings match the current criteria.</div>';
+                return;
+            }
+
+            container.innerHTML = data.findings.map(f => {
+                const sevColor = {
+                    critical: '#ef4444', high: '#f97316', medium: '#eab308',
+                    low: '#3b82f6', informational: '#94a3b8'
+                }[f.severity] || '#94a3b8';
+
+                return `
+                    <div style="background: rgba(0,20,30,0.4); border: 1px solid var(--border-color); border-left: 4px solid ${sevColor}; border-radius: 8px; padding: 12px 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: bold; background: ${sevColor}22; color: ${sevColor}; margin-right: 6px;">${f.severity.toUpperCase()}</span>
+                                <span style="font-size: 0.82rem; font-weight: bold; color: var(--text-primary); font-family: var(--font-mono);">${f.title}</span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button onclick="window.requestAIAnalysis('${f.id}')" style="background: rgba(0,210,255,0.1); border: 1px solid #00d2ff; color: #00d2ff; padding: 3px 8px; border-radius: 4px; font-size: 0.68rem; cursor: pointer; font-family: var(--font-mono);">⚡ AI EXPLANATION</button>
+                                <button onclick="window.toggleFalsePositive('${f.id}', ${!f.false_positive})" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 3px 8px; border-radius: 4px; font-size: 0.68rem; cursor: pointer;">
+                                    ${f.false_positive ? '✓ FALSE POSITIVE' : 'MARK FALSE POSITIVE'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+                            ${f.description}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.7rem; font-family: var(--font-mono); background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                            <div><span style="color: var(--text-secondary);">COMPONENT:</span> <span style="color: #38bdf8;">${f.affected_component || 'N/A'}</span></div>
+                            <div><span style="color: var(--text-secondary);">SCANNER:</span> <span style="color: #e2e8f0;">${f.scanner} (${f.confidence} conf)</span></div>
+                            <div><span style="color: var(--text-secondary);">VULN ID:</span> <span style="color: #fbbf24;">${f.vuln_id || 'N/A'}</span></div>
+                            <div><span style="color: var(--text-secondary);">STATUS:</span> <span style="color: #10b981;">${f.verification}</span></div>
+                        </div>
+
+                        ${f.remediation ? `
+                            <div style="margin-top: 8px; font-size: 0.72rem; color: #a7f3d0; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.15); border-radius: 6px; padding: 8px;">
+                                <strong>REMEDIATION GUIDANCE:</strong> ${f.remediation}
+                            </div>
+                        ` : ''}
+
+                        <div id="ai-analysis-box-${f.id}" style="display: none; margin-top: 10px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.2); border-radius: 6px; padding: 12px; font-size: 0.72rem;"></div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Error loading findings:', e);
+        }
+    }
+
+    window.toggleFalsePositive = async function(findingId, isFp) {
+        try {
+            await fetch(`${apiBase}/api/v1/security/findings/${findingId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    false_positive: isFp,
+                    fp_justification: isFp ? 'Flagged via security dashboard by analyst' : ''
+                })
+            });
+            loadSecurityFindings();
+        } catch (e) {
+            alert('Failed to update finding status.');
+        }
+    };
+
+    window.requestAIAnalysis = async function(findingId) {
+        const box = document.getElementById(`ai-analysis-box-${findingId}`);
+        if (!box) return;
+        box.style.display = 'block';
+        box.innerHTML = '<span style="color: #00d2ff;">Consulting J.A.R.V.I.S. AI Security Analyst...</span>';
+
+        try {
+            const res = await fetch(`${apiBase}/api/v1/security/findings/${findingId}/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ asset_criticality: 'medium' })
+            });
+            const data = await res.json();
+            if (data.success && data.ai_analysis) {
+                const a = data.ai_analysis;
+                box.innerHTML = `
+                    <div style="color: #00d2ff; font-weight: bold; margin-bottom: 6px; font-family: var(--font-mono);">🛡️ J.A.R.V.I.S. GROUNDED INTELLIGENCE BRIEF</div>
+                    <div style="margin-bottom: 6px;"><strong>EXECUTIVE SUMMARY:</strong> ${a.executive_summary || 'N/A'}</div>
+                    <div style="margin-bottom: 6px;"><strong>TECHNICAL BREAKDOWN:</strong> ${a.technical_analysis || 'N/A'}</div>
+                    <div style="margin-bottom: 6px; color: #fbbf24;"><strong>UNCERTAINTY &amp; FP ASSESSMENT:</strong> ${a.uncertainty_and_fp_risk || 'N/A'}</div>
+                    <div style="color: #86efac;"><strong>ACTION PLAN:</strong> ${a.prioritized_action || 'N/A'}</div>
+                `;
+            } else {
+                box.innerHTML = '<span style="color: #ef4444;">Could not generate AI analysis.</span>';
+            }
+        } catch (e) {
+            box.innerHTML = `<span style="color: #ef4444;">Error: ${e.message}</span>`;
+        }
+    };
+
+    // 5. Asset Inventory Loader
+    async function loadSecurityAssets() {
+        const tbody = document.getElementById('sec-assets-tbody');
+        if (!tbody) return;
+        try {
+            const res = await fetch(`${apiBase}/api/v1/security/assets?limit=100`);
+            const data = await res.json();
+            if (!data.success || !data.assets || data.assets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 16px; text-align: center; color: var(--text-secondary);">No assets discovered yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.assets.map(a => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px; font-weight: bold; color: var(--text-primary); font-family: var(--font-mono);">${a.display_name}</td>
+                    <td style="padding: 8px; color: var(--text-secondary);">${a.asset_type}</td>
+                    <td style="padding: 8px; font-family: var(--font-mono); color: #38bdf8;">${a.ip_address || '–'}</td>
+                    <td style="padding: 8px; font-family: var(--font-mono); color: #e2e8f0;">${a.hostname || '–'}</td>
+                    <td style="padding: 8px; color: var(--text-secondary);">${a.discovery_source}</td>
+                    <td style="padding: 8px;"><span style="color: #fbbf24; text-transform: uppercase; font-size: 0.68rem; font-weight: bold;">${a.criticality}</span></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error('Error loading assets:', e);
+        }
+    }
+
+    // 6. Scanner Health Loader
+    async function loadSecurityHealth() {
+        const grid = document.getElementById('sec-health-grid');
+        if (!grid) return;
+        try {
+            const res = await fetch(`${apiBase}/api/v1/security/scanners`);
+            const data = await res.json();
+            if (!data.success || !data.scanners) return;
+
+            grid.innerHTML = data.scanners.map(s => {
+                const isOnline = s.available;
+                return `
+                    <div style="background: rgba(0,20,30,0.4); border: 1px solid ${isOnline ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}; border-radius: 10px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.85rem; font-weight: bold; color: #00d2ff; font-family: var(--font-mono); text-transform: uppercase;">${s.name}</span>
+                            <span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: ${isOnline ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color: ${isOnline ? '#10b981' : '#ef4444'};">
+                                ${isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 6px;">
+                            <strong>LOCATION:</strong> ${s.execution_location}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 6px;">
+                            <strong>PROFILES:</strong> ${(s.supported_profiles || []).join(', ') || 'None'}
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-primary); line-height: 1.3; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px;">
+                            ${s.resource_note || s.last_error || 'Operating normally.'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Error loading health:', e);
+        }
     }
 
     // Initialization

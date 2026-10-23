@@ -42,6 +42,8 @@ desktop.ini
 temp_run/
 scratch/
 jarvis_documents/
+jarvis_security_data/
+local_agent/agent_data/
 *.tmp
 *.bak
 

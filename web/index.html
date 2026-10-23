@@ -59,6 +59,10 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
                     Intelligence Hub
                 </button>
+                <button class="nav-item" id="btn-security">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Security Engine
+                </button>
 
             </nav>
 
@@ -647,6 +651,205 @@
                 </div>
             </div>
 
+
+        
+            <!-- ======================================================== -->
+            <!-- J.A.R.V.I.S. Security Assessment Engine Dashboard View  -->
+            <!-- ======================================================== -->
+            <div id="view-security" style="display: none; flex-direction: column; height: 100%; min-height: 0; gap: 16px; overflow-y: auto; padding-right: 4px;">
+                <!-- Security Header & Tactical Protocol Nav -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px; flex-shrink: 0;">
+                    <div>
+                        <h2 style="font-size: 0.95rem; margin: 0; color: #00d2ff; letter-spacing: 1.5px; font-weight: 700; font-family: var(--font-mono);">DEFENSIVE SECURITY ASSESSMENT ENGINE</h2>
+                        <span style="font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.5px;">AUTHORIZED VULNERABILITY RECONNAISSANCE · CORRELATION · REMEDIATION LIFECYCLE</span>
+                    </div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="sec-subnav">
+                        <button class="intel-tab-btn active" data-sectab="overview">OVERVIEW &amp; HUD</button>
+                        <button class="intel-tab-btn" data-sectab="new-scan">NEW ASSESSMENT</button>
+                        <button class="intel-tab-btn" data-sectab="scans">SCAN JOBS</button>
+                        <button class="intel-tab-btn" data-sectab="findings">FINDINGS &amp; REMEDIATION</button>
+                        <button class="intel-tab-btn" data-sectab="assets">ASSET INVENTORY</button>
+                        <button class="intel-tab-btn" data-sectab="health">SCANNER HEALTH</button>
+                    </div>
+                </div>
+
+                <!-- 1. Overview Tab -->
+                <div id="sec-panel-overview" class="sec-panel" style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Metric Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 1px; font-family: var(--font-mono);">ASSETS INVENTORIED</span>
+                            <div id="sec-stat-assets" style="font-size: 1.6rem; font-weight: bold; color: #00d2ff; font-family: var(--font-mono); margin-top: 4px;">0</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 1px; font-family: var(--font-mono);">ACTIVE / TOTAL SCANS</span>
+                            <div id="sec-stat-scans" style="font-size: 1.6rem; font-weight: bold; color: var(--success-color); font-family: var(--font-mono); margin-top: 4px;">0 / 0</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid rgba(220, 38, 38, 0.4); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.68rem; color: #f87171; letter-spacing: 1px; font-family: var(--font-mono);">CRITICAL FINDINGS</span>
+                            <div id="sec-stat-critical" style="font-size: 1.6rem; font-weight: bold; color: #ef4444; font-family: var(--font-mono); margin-top: 4px;">0</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid rgba(234, 88, 12, 0.4); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.68rem; color: #fb923c; letter-spacing: 1px; font-family: var(--font-mono);">HIGH FINDINGS</span>
+                            <div id="sec-stat-high" style="font-size: 1.6rem; font-weight: bold; color: #f97316; font-family: var(--font-mono); margin-top: 4px;">0</div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.68rem; color: var(--text-secondary); letter-spacing: 1px; font-family: var(--font-mono);">OPEN REMEDIATIONS</span>
+                            <div id="sec-stat-remediations" style="font-size: 1.6rem; font-weight: bold; color: #38bdf8; font-family: var(--font-mono); margin-top: 4px;">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Severity Distribution & Adapter Status -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0 0 12px 0; font-family: var(--font-mono);">VERIFIED VULNERABILITY SPECTRUM</h4>
+                            <div id="sec-severity-bars" style="display: flex; flex-direction: column; gap: 8px;">
+                                <!-- Dynamic severity bars -->
+                            </div>
+                        </div>
+                        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0 0 12px 0; font-family: var(--font-mono);">INTEGRATED SCANNER READINESS</h4>
+                            <div id="sec-scanners-overview-list" style="display: flex; flex-direction: column; gap: 8px;">
+                                <!-- Dynamic scanner cards -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. New Assessment Tab -->
+                <div id="sec-panel-new-scan" class="sec-panel" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
+                        <h3 style="font-size: 0.85rem; color: #00d2ff; margin: 0 0 14px 0; letter-spacing: 1px; font-family: var(--font-mono);">CONFIGURE AUTHORIZED SECURITY RECONNAISSANCE</h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
+                            <div>
+                                <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">TARGET SPECIFICATION (Host, Domain, IP, CIDR, or Lockfile Path)</label>
+                                <input type="text" id="sec-input-target" placeholder="e.g. example.com or requirements.txt" style="width: 100%; box-sizing: border-box; background: rgba(0,20,30,0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.8rem; outline: none;">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">ASSESSMENT PROFILE</label>
+                                    <select id="sec-select-profile" style="width: 100%; box-sizing: border-box; background: rgba(0,20,30,0.8); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-family: var(--font-sans); font-size: 0.8rem; outline: none;">
+                                        <option value="dependency_audit">Dependency Audit (OSV Known Vulnerabilities - Cloud)</option>
+                                        <option value="service_inventory">Service Inventory (Nmap Port &amp; Version - Local Agent)</option>
+                                        <option value="asset_discovery">Asset Discovery (Nmap Host Ping Sweep - Local Agent)</option>
+                                        <option value="web_baseline">Web Baseline (Passive ZAP Checks)</option>
+                                        <option value="infrastructure_assessment">Infrastructure Assessment (Controlled Checks)</option>
+                                        <option value="comprehensive">Comprehensive Assessment (Bounded Multi-Tool)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">SCOPE OWNER / OPERATOR IDENTITY</label>
+                                    <input type="text" id="sec-input-owner" value="SecOps Administrator" style="width: 100%; box-sizing: border-box; background: rgba(0,20,30,0.4); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-family: var(--font-sans); font-size: 0.8rem; outline: none;">
+                                </div>
+                            </div>
+
+                            <div style="background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.25); border-radius: 8px; padding: 12px;">
+                                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.75rem; color: #fecaca;">
+                                    <input type="checkbox" id="sec-check-auth" style="margin-top: 3px; cursor: pointer;">
+                                    <span>
+                                        <strong>LEGAL &amp; AUTHORIZATION ACKNOWLEDGEMENT:</strong> I hereby certify that I am the verified owner of the specified target asset or possess explicit written authorization to conduct vulnerability and security assessments on it. I understand J.A.R.V.I.S. strictly prohibits unauthorized testing.
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                                <button id="sec-btn-submit-scan" style="background: rgba(0, 210, 255, 0.15); border: 1px solid #00d2ff; color: #00d2ff; padding: 10px 24px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; letter-spacing: 1px; font-family: var(--font-mono); transition: all 0.2s;">
+                                    INITIATE ASSESSMENT
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Scan Jobs Tab -->
+                <div id="sec-panel-scans" class="sec-panel" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0; font-family: var(--font-mono);">ACTIVE &amp; RECENT SECURITY ASSESSMENTS</h4>
+                            <button id="sec-btn-refresh-scans" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">REFRESH</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;" id="sec-scans-table">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-family: var(--font-mono);">
+                                        <th style="padding: 8px;">TARGET</th>
+                                        <th style="padding: 8px;">PROFILE</th>
+                                        <th style="padding: 8px;">STATUS</th>
+                                        <th style="padding: 8px;">PROGRESS</th>
+                                        <th style="padding: 8px;">FINDINGS</th>
+                                        <th style="padding: 8px;">REPORTS</th>
+                                        <th style="padding: 8px;">ACTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sec-scans-tbody">
+                                    <tr><td colspan="7" style="padding: 16px; text-align: center; color: var(--text-secondary);">No scans executed yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Findings & Remediation Tab -->
+                <div id="sec-panel-findings" class="sec-panel" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0; font-family: var(--font-mono);">DETECTED VULNERABILITY INVENTORY &amp; REMEDIATION</h4>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="sec-findings-filter-sev" style="background: rgba(0,20,30,0.8); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;">
+                                    <option value="">All Severities</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                    <option value="informational">Informational</option>
+                                </select>
+                                <button id="sec-btn-refresh-findings" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">REFRESH</button>
+                            </div>
+                        </div>
+
+                        <div id="sec-findings-container" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Dynamic finding cards -->
+                            <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 0.75rem;">No security findings recorded yet. Execute an assessment to populate results.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Asset Inventory Tab -->
+                <div id="sec-panel-assets" class="sec-panel" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0 0 12px 0; font-family: var(--font-mono);">DISCOVERED &amp; MONITORED ASSETS</h4>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-family: var(--font-mono);">
+                                        <th style="padding: 8px;">DISPLAY NAME</th>
+                                        <th style="padding: 8px;">TYPE</th>
+                                        <th style="padding: 8px;">IP ADDRESS</th>
+                                        <th style="padding: 8px;">HOSTNAME</th>
+                                        <th style="padding: 8px;">SOURCE</th>
+                                        <th style="padding: 8px;">CRITICALITY</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sec-assets-tbody">
+                                    <tr><td colspan="6" style="padding: 16px; text-align: center; color: var(--text-secondary);">No assets discovered yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Scanner Health Tab -->
+                <div id="sec-panel-health" class="sec-panel" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 style="font-size: 0.78rem; color: #00d2ff; letter-spacing: 1px; margin: 0 0 12px 0; font-family: var(--font-mono);">SCANNER ADAPTER OPERATIONAL STATUS</h4>
+                        <div id="sec-health-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;">
+                            <!-- Dynamic health cards -->
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </main>
 

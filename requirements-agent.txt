@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  requirements-agent.txt — Local Windows Agent dependencies
+#  Install on the user's Windows PC alongside Nmap binary.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── HTTP ──────────────────────────────────────────────────────────────────────
+requests>=2.31.0
+urllib3>=2.0.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── Optional: python-nmap wrapper (not required — adapter uses subprocess) ────
+# python-nmap>=0.7.1
+
+# NOTE: Nmap binary must be installed separately.
+# Download: https://nmap.org/download.html
+# Ensure nmap.exe is on system PATH.
