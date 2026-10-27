@@ -14,7 +14,7 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
 # Free tier = 0.1 vCPU / 512 MB RAM
 # Keep workers=1 on free tier by default, or scale with WEB_CONCURRENCY in cluster/load-balanced setups.
 # Use threads for concurrency (I/O-bound LLM calls benefit greatly).
-workers = int(os.environ.get('WEB_CONCURRENCY', os.environ.get('GUNICORN_WORKERS', 1)))
+workers = int(os.environ.get('GUNICORN_WORKERS', 1))
 threads = int(os.environ.get('GUNICORN_THREADS', 4))
 worker_class = "gthread"        # thread-based, no gevent dependency needed
 

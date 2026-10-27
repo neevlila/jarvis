@@ -33,6 +33,9 @@ services:
       - key: PORT
         value: "10000"
 
+      - key: WEB_CONCURRENCY
+        value: "1"
+
       # Render injects this automatically — used for CORS whitelist
       - key: RENDER_EXTERNAL_URL
         fromService:
