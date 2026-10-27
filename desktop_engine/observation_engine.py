@@ -5,6 +5,7 @@ screenshot files, and hardware metrics.
 """
 
 import os
+import sys
 import time
 try:
     import pyautogui
@@ -62,6 +63,8 @@ class ObservationEngine:
         Retrieves title, bounding dimensions, process name, and cropped image of the focused window.
         Returns a dictionary for backward compatibility and internal usage.
         """
+        if sys.platform != "win32":
+            return {"title": "", "process_name": "unknown", "bounds": None, "screenshot_path": "active_window.png"}
         try:
             import win32gui
             import win32process

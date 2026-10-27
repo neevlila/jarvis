@@ -1,3 +1,4 @@
+import sys
 """
 UI Automation Service for J.A.R.V.I.S. Desktop Engine.
 Crawls the active Windows UI tree using uiautomation to discover interactable controls.
@@ -21,7 +22,7 @@ class UIAutomationService:
         Returns a list of PerceptionTarget objects tagged with screen/ui_automation coordinate spaces.
         """
         targets: List[PerceptionTarget] = []
-        if not ui_available:
+        if sys.platform != "win32" or not ui_available:
             return targets
 
         try:

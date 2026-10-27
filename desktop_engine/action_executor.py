@@ -7,6 +7,7 @@ Translates approved and validated action decisions into OS inputs.
 
 import time
 import os
+import sys
 import subprocess
 from typing import Dict, Any, Optional, Union, Tuple
 try:
@@ -209,6 +210,8 @@ class ActionExecutor:
 
     @staticmethod
     def _activate_window_by_title(target_title: str) -> bool:
+        if sys.platform != "win32":
+            return False
         try:
             import win32gui
             import win32con

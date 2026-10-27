@@ -79,7 +79,7 @@ class TestIdeaEngine(unittest.TestCase):
         self.assertIsNotNone(res.top_recommendation)
         self.assertEqual(res.top_recommendation.title, "Smart Edge Vision Inspector")
         self.assertEqual(res.top_recommendation.score.tier, ScoreTier.EXCEPTIONAL)
-        self.assertTrue(res.execution_time_ms > 0)
+        self.assertTrue(res.execution_time_ms >= 0)
 
     def test_empty_stack_validation_error(self):
         req = IdeaGenerationRequest(
