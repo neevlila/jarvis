@@ -654,7 +654,7 @@ def _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
         items = []
         if isinstance(content, dict):
             if 'points' in content and isinstance(content['points'], list):
-                items = content['points']
+                items = [str(x) for x in content['points']]
             elif 'cards' in content and isinstance(content['cards'], list):
                 for c in content['cards']:
                     if isinstance(c, dict):
@@ -668,11 +668,35 @@ def _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
                     else:
                         items.append(str(st))
             elif 'left_col' in content and 'right_col' in content:
-                items = (content.get('left_col') or []) + (content.get('right_col') or [])
+                for col in [content.get('left_col'), content.get('right_col')]:
+                    if isinstance(col, dict):
+                        h = str(col.get('header', '')).strip()
+                        b = str(col.get('body', '')).strip()
+                        if h:
+                            items.append(h)
+                        if b:
+                            for bline in b.split('\n'):
+                                bline_clean = bline.strip().lstrip('•-* \t').strip()
+                                if bline_clean:
+                                    items.append(bline_clean)
+                    elif isinstance(col, list):
+                        items.extend([str(x) for x in col])
+                    elif col:
+                        items.append(str(col))
+            else:
+                for k, v in content.items():
+                    if isinstance(v, list):
+                        items.extend([str(x) for x in v])
+                    elif isinstance(v, dict):
+                        val_str = v.get('header', '') or v.get('body', '') or v.get('title', '')
+                        if val_str:
+                            items.append(f"{k}: {val_str}")
+                    elif v:
+                        items.append(f"{k}: {v}")
         elif isinstance(content, list):
-            items = content
+            items = [str(x) for x in content]
         elif isinstance(content, str):
-            items = [content]
+            items = [line.strip().lstrip('•-* \t').strip() for line in content.split('\n') if line.strip()]
 
         if not items:
             items = [f'Detailed analysis and strategy for {item.get("title", topic)}.']
