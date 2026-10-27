@@ -185,32 +185,33 @@
             this.ringsGroup = new THREE.Group();
             this.scene.add(this.ringsGroup);
 
-            // Orbit Ring 1 (Equatorial / Primary Orbit - Cyan)
-            const ring1Geo = new THREE.RingGeometry(this.options.radius * 1.20, this.options.radius * 1.235, 96);
-            ring1Geo.rotateX(Math.PI / 2);
+            // Orbit Ring 1 (Tilted Primary Orbit - Glowing Cyan #00d2ff)
+            const ring1Geo = new THREE.RingGeometry(this.options.radius * 1.22, this.options.radius * 1.265, 128);
+            ring1Geo.rotateX(Math.PI / 2.5);
+            ring1Geo.rotateY(Math.PI / 8);
             const ring1Mat = new THREE.MeshBasicMaterial({
                 color: 0x00d2ff,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.45,
+                opacity: 0.70,
                 depthWrite: false
             });
-            const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
-            this.ringsGroup.add(ring1);
+            this.ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
+            this.ringsGroup.add(this.ring1);
 
-            // Orbit Ring 2 (Tilted Polar Orbit - Neon Emerald / Teal)
-            const ring2Geo = new THREE.RingGeometry(this.options.radius * 1.30, this.options.radius * 1.335, 96);
-            ring2Geo.rotateX(Math.PI / 2.8);
-            ring2Geo.rotateY(Math.PI / 4.5);
+            // Orbit Ring 2 (Tilted Polar Orbit - Neon Emerald #00ffcc)
+            const ring2Geo = new THREE.RingGeometry(this.options.radius * 1.36, this.options.radius * 1.405, 128);
+            ring2Geo.rotateX(-Math.PI / 2.8);
+            ring2Geo.rotateY(-Math.PI / 4.2);
             const ring2Mat = new THREE.MeshBasicMaterial({
                 color: 0x00ffcc,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.40,
+                opacity: 0.65,
                 depthWrite: false
             });
-            const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-            this.ringsGroup.add(ring2);
+            this.ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+            this.ringsGroup.add(this.ring2);
         }
 
         buildStarfield() {
@@ -418,10 +419,15 @@
                 this.cloudMesh.rotation.y += 0.0003;
             }
 
-            // Slowly spin orbital rings
+            // Continuously rotate dual orbital tactical rings around Earth
             if (this.ringsGroup) {
-                this.ringsGroup.rotation.y += 0.0008;
-                this.ringsGroup.rotation.z += 0.0004;
+                this.ringsGroup.rotation.y += 0.003;
+            }
+            if (this.ring1) {
+                this.ring1.rotation.z += 0.005;
+            }
+            if (this.ring2) {
+                this.ring2.rotation.z -= 0.006;
             }
 
             this.renderer.render(this.scene, this.camera);

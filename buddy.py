@@ -206,6 +206,16 @@ class InMemoryRateLimiter:
 
 rate_limiter = InMemoryRateLimiter()
 
+def get_assistant():
+    global assistant_ref
+    if assistant_ref is None:
+        try:
+            assistant_ref = JarvisAssistant()
+        except Exception as e:
+            print(f"[Warning] On-demand JarvisAssistant init notice: {e}")
+    return assistant_ref
+
+
 # ── Dynamic Inclusive Salutation / Honorific Management ───────────────────
 USER_HONORIFIC = os.environ.get('USER_HONORIFIC', os.environ.get('USER_TITLE', '')).strip()
 
@@ -279,6 +289,17 @@ def enqueue_output_chars(stream, stream_type):
 
 assistant_ref = None
 thread_local = threading.local()
+
+def _bg_init_assistant():
+    global assistant_ref
+    try:
+        if assistant_ref is None:
+            assistant_ref = JarvisAssistant()
+    except Exception as e:
+        print(f"[Warning] Background JarvisAssistant init notice: {e}")
+
+_assistant_boot_thread = threading.Thread(target=_bg_init_assistant, daemon=True)
+_assistant_boot_thread.start()
 
 # ── CPU background sampler ─────────────────────────────────────────────
 # psutil.cpu_percent(interval=None) returns 0.0 on first call and gives only
@@ -355,8 +376,6 @@ def health_endpoint():
 
 @app.route('/api/status')
 def get_status():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     try:
         cpu = round(_cpu_cached, 1)
         ram = psutil.virtual_memory().percent
@@ -379,12 +398,12 @@ def get_status():
                 pass
             
         notifications = []
-        if hasattr(assistant_ref, 'notifications'):
+        if assistant_ref and hasattr(assistant_ref, 'notifications'):
             notifications = list(assistant_ref.notifications)
             assistant_ref.notifications.clear()
 
         context_summary = {}
-        if hasattr(assistant_ref, 'get_context_summary'):
+        if assistant_ref and hasattr(assistant_ref, 'get_context_summary'):
             try:
                 context_summary = assistant_ref.get_context_summary()
             except Exception:
@@ -394,10 +413,11 @@ def get_status():
             'cpu': cpu,
             'ram': ram,
             'drives': drives,
-            'typing_active': assistant_ref.typing_active,
-            'paused': assistant_ref.paused,
+            'typing_active': getattr(assistant_ref, 'typing_active', False),
+            'paused': getattr(assistant_ref, 'paused', False),
             'notifications': notifications,
-            'context': context_summary
+            'context': context_summary,
+            'status': 'active' if assistant_ref else 'standby'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -994,8 +1014,6 @@ def run_command_api():
 
 @app.route('/api/generate_qr', methods=['POST'])
 def generate_qr_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     data = request.get_json() or {}
     text = data.get('text', '').strip()
     if not text:
@@ -1044,58 +1062,113 @@ def save_qr_api():
 
 @app.route('/api/weather')
 def get_weather_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     city = request.args.get('city', '').strip()
     if not city:
         return jsonify({'error': 'No city provided'}), 400
         
     try:
         api_key = cfg.WeatherConfig.WEATHER_API_KEY
-        if not api_key:
-            return jsonify({'error': 'Weather API key not configured in .env'}), 400
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            return jsonify(response.json())
-        else:
-            return jsonify({'error': f"Failed to fetch weather for {city}"}), response.status_code
+        if api_key:
+            url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+            response = requests.get(url, timeout=8)
+            if response.status_code == 200:
+                return jsonify(response.json())
+        
+        # Resilient fallback: wttr.in (no API key required)
+        wttr_resp = requests.get(f"https://wttr.in/{urllib.parse.quote(city)}?format=j1", timeout=8)
+        if wttr_resp.status_code == 200:
+            wdata = wttr_resp.json()
+            curr = wdata.get('current_condition', [{}])[0]
+            temp_c = float(curr.get('temp_C', 20))
+            humidity = int(curr.get('humidity', 50))
+            desc = curr.get('weatherDesc', [{}])[0].get('value', 'Clear')
+            wind_kmph = float(curr.get('windspeedKmph', 10))
+            wind_ms = round(wind_kmph / 3.6, 1)
+            return jsonify({
+                'name': city.capitalize(),
+                'main': {
+                    'temp': temp_c,
+                    'humidity': humidity
+                },
+                'weather': [{'description': desc}],
+                'wind': {'speed': wind_ms}
+            })
+        return jsonify({'error': f"Failed to fetch weather for {city}"}), 502
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/news')
 def get_news_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     try:
-        api_key = cfg.NewsConfig.NEWS_API_KEY
-        if not api_key:
-            return jsonify({'error': 'News API key not configured in .env'}), 400
-            
         category = request.args.get('category', 'general').lower().strip()
+        api_key = cfg.NewsConfig.NEWS_API_KEY
         
-        if category == 'ai':
-            url = f"https://newsapi.org/v2/everything?q=Artificial%20Intelligence%20OR%20AI&language=en&sortBy=publishedAt&apiKey={api_key}"
-        elif category == 'politics':
-            url = f"https://newsapi.org/v2/everything?q=politics&language=en&sortBy=publishedAt&apiKey={api_key}"
-        elif category in ['sports', 'technology', 'business']:
-            url = f"https://newsapi.org/v2/top-headlines?country=us&category={category}&apiKey={api_key}"
-        else:
-            url = f"https://newsapi.org/v2/top-headlines?country=us&category=general&apiKey={api_key}"
+        if api_key:
+            if category == 'ai':
+                url = f"https://newsapi.org/v2/everything?q=Artificial%20Intelligence%20OR%20AI&language=en&sortBy=publishedAt&apiKey={api_key}"
+            elif category == 'politics':
+                url = f"https://newsapi.org/v2/everything?q=politics&language=en&sortBy=publishedAt&apiKey={api_key}"
+            elif category in ['sports', 'technology', 'business']:
+                url = f"https://newsapi.org/v2/top-headlines?country=us&category={category}&apiKey={api_key}"
+            else:
+                url = f"https://newsapi.org/v2/top-headlines?country=us&category=general&apiKey={api_key}"
+            try:
+                response = requests.get(url, timeout=8)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('articles'):
+                        return jsonify(data)
+            except Exception as e:
+                print(f"[Warning] NewsAPI fetch failed, falling back to RSS: {e}")
+
+        # Resilient fallback: Google News RSS Feed (No API key needed)
+        rss_map = {
+            'ai': 'https://news.google.com/rss/search?q=Artificial+Intelligence&hl=en-US&gl=US&ceid=US:en',
+            'technology': 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en',
+            'business': 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en',
+            'sports': 'https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en',
+            'politics': 'https://news.google.com/rss/search?q=politics&hl=en-US&gl=US&ceid=US:en'
+        }
+        rss_url = rss_map.get(category, 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en')
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        rss_resp = requests.get(rss_url, headers=headers, timeout=8)
+        if rss_resp.status_code == 200:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(rss_resp.content)
+            articles = []
+            for item in root.findall('.//item')[:25]:
+                title_elem = item.find('title')
+                link_elem = item.find('link')
+                desc_elem = item.find('description')
+                pub_elem = item.find('pubDate')
+                source_elem = item.find('source')
+                
+                title = title_elem.text if title_elem is not None else 'Live Headline'
+                url = link_elem.text if link_elem is not None else '#'
+                desc = desc_elem.text if desc_elem is not None else title
+                desc = re.sub(r'<[^>]+>', '', desc).strip()
+                pub = pub_elem.text if pub_elem is not None else ''
+                source_name = source_elem.text if source_elem is not None else 'Google News'
+                
+                articles.append({
+                    'title': title,
+                    'description': desc,
+                    'url': url,
+                    'publishedAt': pub,
+                    'source': {'name': source_name}
+                })
+            return jsonify({
+                'status': 'ok',
+                'totalResults': len(articles),
+                'articles': articles
+            })
             
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            return jsonify(response.json())
-        else:
-            return jsonify({'error': 'Failed to fetch news'}), response.status_code
+        return jsonify({'error': 'Failed to fetch news'}), 502
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/news_summary', methods=['POST'])
 def news_summary_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     try:
         data = request.get_json() or {}
         title = data.get('title', '').strip()
@@ -1149,8 +1222,6 @@ def listen_voice_api():
 
 @app.route('/api/generate_email', methods=['POST'])
 def generate_email_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     try:
         data = request.get_json() or {}
         to_email = data.get('to', '').strip()
@@ -1190,8 +1261,6 @@ def generate_email_api():
 
 @app.route('/api/generate_ppt', methods=['POST'])
 def generate_ppt_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     data = request.get_json() or {}
     topic = data.get('topic', '').strip()
     slide_count = data.get('slide_count', 6)
@@ -1314,8 +1383,6 @@ def extract_json_data(res_text):
 
 @app.route('/api/code_assistant', methods=['POST'])
 def code_assistant_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
     data = request.get_json() or {}
     prompt = data.get('prompt', '').strip()
     language = data.get('language', 'python').strip()
@@ -1675,8 +1742,6 @@ def console_input_api():
 
 @app.route('/api/debug_code', methods=['POST'])
 def debug_code_api():
-    if not assistant_ref:
-        return jsonify({'error': 'Assistant not initialized'}), 503
         
     data = request.get_json() or {}
     code = data.get('code', '').strip()

@@ -780,13 +780,36 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error calling save_qr API:", err);
         }
 
-        // Trigger browser download
-        const link = document.createElement('a');
-        link.href = qrImageData;
-        link.download = qrFilename || 'qr_code.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Trigger guaranteed browser download via Blob
+        try {
+            const arr = qrImageData.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            const blob = new Blob([u8arr], { type: mime });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = qrFilename || 'qr_code.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+            appendLog('JARVIS', `QR Code successfully downloaded as ${qrFilename || 'qr_code.png'}`, 'assistant-log');
+        } catch (downloadErr) {
+            console.warn("Blob download fallback:", downloadErr);
+            const link = document.createElement('a');
+            link.href = qrImageData;
+            link.download = qrFilename || 'qr_code.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     });
 
     qrResetBtn.addEventListener('click', () => {
@@ -1176,29 +1199,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewSecurity) viewSecurity.style.display = 'none';
     }
 
-    if (btnDashboard) {
-        btnDashboard.addEventListener('click', () => {
-            deactivateAllNavs();
-            btnDashboard.classList.add('active');
-            viewDashboard.style.display = 'flex';
-            
-            // Restore right panel and console footer
-            const rightPanel = document.querySelector('.right-panel');
-            if (rightPanel) rightPanel.style.display = 'flex';
-            const consoleFooter = document.querySelector('.console-footer');
-            if (consoleFooter) consoleFooter.style.display = 'flex';
-            const dashboardContainer = document.querySelector('.dashboard-container');
-            if (dashboardContainer) {
-                dashboardContainer.style.gridTemplateColumns = window.innerWidth <= 960 ? '1fr' : '280px 1fr 340px';
-            }
-        });
+    function openDashboardView(updateHash = true) {
+        deactivateAllNavs();
+        if (btnDashboard) btnDashboard.classList.add('active');
+        if (viewDashboard) viewDashboard.style.display = 'flex';
+        
+        // Restore right panel and console footer
+        const rightPanel = document.querySelector('.right-panel');
+        if (rightPanel) rightPanel.style.display = 'flex';
+        const consoleFooter = document.querySelector('.console-footer');
+        if (consoleFooter) consoleFooter.style.display = 'flex';
+        const dashboardContainer = document.querySelector('.dashboard-container');
+        if (dashboardContainer) {
+            dashboardContainer.style.gridTemplateColumns = window.innerWidth <= 960 ? '1fr' : '280px 1fr 340px';
+        }
+        if (updateHash && window.location.hash !== '#dashboard') {
+            history.pushState(null, '', '#dashboard');
+        }
     }
 
-    if (btnCodeAssistant) {
-        btnCodeAssistant.addEventListener('click', () => {
-            deactivateAllNavs();
-            btnCodeAssistant.classList.add('active');
-            const isMobile = window.innerWidth <= 960;
+    function openCodeAssistantView(updateHash = true) {
+        deactivateAllNavs();
+        if (btnCodeAssistant) btnCodeAssistant.classList.add('active');
+        const isMobile = window.innerWidth <= 960;
+        if (viewCodeAssistant) {
             viewCodeAssistant.style.display = isMobile ? 'flex' : 'grid';
             viewCodeAssistant.style.gridTemplateColumns = isMobile ? '' : '360px minmax(0, 1fr)';
             viewCodeAssistant.style.flexDirection = 'column';
@@ -1207,55 +1231,59 @@ document.addEventListener('DOMContentLoaded', () => {
             viewCodeAssistant.style.overflowY = isMobile ? 'auto' : 'hidden';
             viewCodeAssistant.style.minHeight = '0';
             viewCodeAssistant.style.width = '100%';
-            
-            // Hide right panel and console footer
-            const rightPanel = document.querySelector('.right-panel');
-            if (rightPanel) rightPanel.style.display = 'none';
-            const consoleFooter = document.querySelector('.console-footer');
-            if (consoleFooter) consoleFooter.style.display = 'none';
-            const dashboardContainer = document.querySelector('.dashboard-container');
-            if (dashboardContainer) {
-                dashboardContainer.style.gridTemplateColumns = (window.innerWidth <= 960) ? '1fr' : '280px 1fr';
-            }
-        });
+        }
+        
+        // Hide right panel and console footer
+        const rightPanel = document.querySelector('.right-panel');
+        if (rightPanel) rightPanel.style.display = 'none';
+        const consoleFooter = document.querySelector('.console-footer');
+        if (consoleFooter) consoleFooter.style.display = 'none';
+        const dashboardContainer = document.querySelector('.dashboard-container');
+        if (dashboardContainer) {
+            dashboardContainer.style.gridTemplateColumns = (window.innerWidth <= 960) ? '1fr' : '280px 1fr';
+        }
+        if (updateHash && window.location.hash !== '#code-assistant') {
+            history.pushState(null, '', '#code-assistant');
+        }
     }
 
-    function openIdeaEngineView() {
+    function openIdeaEngineView(updateHash = true) {
         deactivateAllNavs();
         if (btnIdeaEngine) btnIdeaEngine.classList.add('active');
         if (viewIdeaEngine) viewIdeaEngine.style.display = 'grid';
         
         // Hide right panel and console footer to give Idea Engine full workspace height
-        document.querySelector('.right-panel').style.display = 'none';
-        document.querySelector('.console-footer').style.display = 'none';
-        document.querySelector('.dashboard-container').style.gridTemplateColumns = '280px 1fr';
+        const rightPanel = document.querySelector('.right-panel');
+        if (rightPanel) rightPanel.style.display = 'none';
+        const consoleFooter = document.querySelector('.console-footer');
+        if (consoleFooter) consoleFooter.style.display = 'none';
+        const dashboardContainer = document.querySelector('.dashboard-container');
+        if (dashboardContainer) dashboardContainer.style.gridTemplateColumns = '280px 1fr';
+        if (updateHash && window.location.hash !== '#idea-engine') {
+            history.pushState(null, '', '#idea-engine');
+        }
     }
 
-    if (btnIdeaEngine) {
-        btnIdeaEngine.addEventListener('click', openIdeaEngineView);
-    }
-    if (launchIdeaEngineBtn) {
-        launchIdeaEngineBtn.addEventListener('click', openIdeaEngineView);
-    }
-
-    function openIntelligenceView() {
+    function openIntelligenceView(updateHash = true) {
         deactivateAllNavs();
         if (btnIntelligence) btnIntelligence.classList.add('active');
         if (viewIntelligence) viewIntelligence.style.display = 'flex';
         
         // Hide right panel and console footer to give Intelligence Hub full workspace height
-        document.querySelector('.right-panel').style.display = 'none';
-        document.querySelector('.console-footer').style.display = 'none';
-        document.querySelector('.dashboard-container').style.gridTemplateColumns = '280px 1fr';
+        const rightPanel = document.querySelector('.right-panel');
+        if (rightPanel) rightPanel.style.display = 'none';
+        const consoleFooter = document.querySelector('.console-footer');
+        if (consoleFooter) consoleFooter.style.display = 'none';
+        const dashboardContainer = document.querySelector('.dashboard-container');
+        if (dashboardContainer) dashboardContainer.style.gridTemplateColumns = '280px 1fr';
 
         loadCurrentIntelTab();
+        if (updateHash && window.location.hash !== '#intelligence') {
+            history.pushState(null, '', '#intelligence');
+        }
     }
 
-    if (btnIntelligence) {
-        btnIntelligence.addEventListener('click', openIntelligenceView);
-    }
-
-    function openSecurityView() {
+    function openSecurityView(updateHash = true) {
         deactivateAllNavs();
         if (btnSecurity) btnSecurity.classList.add('active');
         if (viewSecurity) viewSecurity.style.display = 'flex';
@@ -1268,10 +1296,56 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dashboardContainer) dashboardContainer.style.gridTemplateColumns = '280px 1fr';
 
         loadSecurityOverview();
+        if (updateHash && window.location.hash !== '#security') {
+            history.pushState(null, '', '#security');
+        }
     }
 
+    if (btnDashboard) {
+        btnDashboard.addEventListener('click', () => openDashboardView(true));
+    }
+    if (btnCodeAssistant) {
+        btnCodeAssistant.addEventListener('click', () => openCodeAssistantView(true));
+    }
+    if (btnIdeaEngine) {
+        btnIdeaEngine.addEventListener('click', () => openIdeaEngineView(true));
+    }
+    if (launchIdeaEngineBtn) {
+        launchIdeaEngineBtn.addEventListener('click', () => openIdeaEngineView(true));
+    }
+    if (btnIntelligence) {
+        btnIntelligence.addEventListener('click', () => openIntelligenceView(true));
+    }
     if (btnSecurity) {
-        btnSecurity.addEventListener('click', openSecurityView);
+        btnSecurity.addEventListener('click', () => openSecurityView(true));
+    }
+
+    // ── Hash-based Client Page Router ─────────────────────────────────────
+    function handleRouteFromURL() {
+        const hash = (window.location.hash || '').toLowerCase().replace('#', '').trim();
+        if (hash === 'code-assistant') {
+            openCodeAssistantView(false);
+        } else if (hash === 'idea-engine') {
+            openIdeaEngineView(false);
+        } else if (hash === 'intelligence') {
+            openIntelligenceView(false);
+        } else if (hash === 'security') {
+            openSecurityView(false);
+        } else if (hash === 'qr') {
+            openDashboardView(false);
+            if (launchQrBtn) launchQrBtn.click();
+        } else if (hash === 'ppt') {
+            openDashboardView(false);
+            if (launchPptBtn) launchPptBtn.click();
+        } else if (hash === 'dashboard' || !hash) {
+            openDashboardView(false);
+        }
+    }
+
+    window.addEventListener('hashchange', handleRouteFromURL);
+    window.addEventListener('popstate', handleRouteFromURL);
+    if (window.location.hash) {
+        handleRouteFromURL();
     }
 
     // Code Assistant Actions
@@ -2076,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ideaModalRisks = document.getElementById('idea-modal-risks');
     const ideaModalFuture = document.getElementById('idea-modal-future');
 
-    let currentTechStack = ['Python', 'FastAPI', 'Supabase', 'Gemini API', 'Docker'];
+    let currentTechStack = ['Python', 'FastAPI', 'Supabase', 'Gemini API', 'Docker'];
     let isIdeaGenerating = false;
     let lastGeneratedResult = null;
     let selectedIdeaForModal = null;
@@ -2097,11 +2171,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function addTechTag(techName) {
-        if (isIdeaGenerating) {
-            appendLog('IDEA ENGINE', 'Generation in progress. Inputs locked until current synthesis completes.', 'system-log');
-            return;
-        }
+    function addTechTag(techName) {
+        if (isIdeaGenerating) {
+            appendLog('IDEA ENGINE', 'Generation in progress. Inputs locked until current synthesis completes.', 'system-log');
+            return;
+        }
 
         const clean = techName.trim();
         if (clean && !currentTechStack.map(t => t.toLowerCase()).includes(clean.toLowerCase())) {
@@ -2139,8 +2213,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.querySelectorAll('.tech-preset-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (isIdeaGenerating) return;
+        btn.addEventListener('click', () => {
+            if (isIdeaGenerating) return;
 
             const presetKey = btn.getAttribute('data-preset');
             const presetStack = STACK_PRESETS[presetKey];
@@ -2189,24 +2263,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (ideaLoadingState) ideaLoadingState.style.display = 'flex';
             if (ideaAnalysisBanner) ideaAnalysisBanner.style.display = 'none';
             ideaGenerateBtn.disabled = true;
-            ideaGenerateBtn.innerText = 'ANALYZING STACK & REASONING...';
-            isIdeaGenerating = true;
-            if (ideaModeSelect) ideaModeSelect.disabled = true;
-            if (ideaTechInput) ideaTechInput.disabled = true;
-            if (ideaAddTechBtn) ideaAddTechBtn.disabled = true;
-            if (ideaProblemInput) ideaProblemInput.disabled = true;
-            if (ideaExpSelect) ideaExpSelect.disabled = true;
-            if (ideaTypeSelect) ideaTypeSelect.disabled = true;
-            if (ideaDomainSelect) ideaDomainSelect.disabled = true;
-            if (ideaTimeSelect) ideaTimeSelect.disabled = true;
-            if (ideaTechTags) {
-                ideaTechTags.style.opacity = '0.6';
-                ideaTechTags.style.pointerEvents = 'none';
-            }
-            document.querySelectorAll('.tech-preset-btn, .tech-chip-quick').forEach(b => {
-                b.style.pointerEvents = 'none';
-                b.style.opacity = '0.4';
-            });
+            ideaGenerateBtn.innerText = 'ANALYZING STACK & REASONING...';
+            isIdeaGenerating = true;
+            if (ideaModeSelect) ideaModeSelect.disabled = true;
+            if (ideaTechInput) ideaTechInput.disabled = true;
+            if (ideaAddTechBtn) ideaAddTechBtn.disabled = true;
+            if (ideaProblemInput) ideaProblemInput.disabled = true;
+            if (ideaExpSelect) ideaExpSelect.disabled = true;
+            if (ideaTypeSelect) ideaTypeSelect.disabled = true;
+            if (ideaDomainSelect) ideaDomainSelect.disabled = true;
+            if (ideaTimeSelect) ideaTimeSelect.disabled = true;
+            if (ideaTechTags) {
+                ideaTechTags.style.opacity = '0.6';
+                ideaTechTags.style.pointerEvents = 'none';
+            }
+            document.querySelectorAll('.tech-preset-btn, .tech-chip-quick').forEach(b => {
+                b.style.pointerEvents = 'none';
+                b.style.opacity = '0.4';
+            });
 
 
             try {
@@ -2261,24 +2335,24 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 if (ideaLoadingState) ideaLoadingState.style.display = 'none';
                 ideaGenerateBtn.disabled = false;
-                ideaGenerateBtn.innerText = 'ANALYZE STACK & GENERATE';
-                isIdeaGenerating = false;
-                if (ideaModeSelect) ideaModeSelect.disabled = false;
-                if (ideaTechInput) ideaTechInput.disabled = false;
-                if (ideaAddTechBtn) ideaAddTechBtn.disabled = false;
-                if (ideaProblemInput) ideaProblemInput.disabled = false;
-                if (ideaExpSelect) ideaExpSelect.disabled = false;
-                if (ideaTypeSelect) ideaTypeSelect.disabled = false;
-                if (ideaDomainSelect) ideaDomainSelect.disabled = false;
-                if (ideaTimeSelect) ideaTimeSelect.disabled = false;
-                if (ideaTechTags) {
-                    ideaTechTags.style.opacity = '1';
-                    ideaTechTags.style.pointerEvents = 'auto';
-                }
-                document.querySelectorAll('.tech-preset-btn, .tech-chip-quick').forEach(b => {
-                    b.style.pointerEvents = 'auto';
-                    b.style.opacity = '1';
-                });
+                ideaGenerateBtn.innerText = 'ANALYZE STACK & GENERATE';
+                isIdeaGenerating = false;
+                if (ideaModeSelect) ideaModeSelect.disabled = false;
+                if (ideaTechInput) ideaTechInput.disabled = false;
+                if (ideaAddTechBtn) ideaAddTechBtn.disabled = false;
+                if (ideaProblemInput) ideaProblemInput.disabled = false;
+                if (ideaExpSelect) ideaExpSelect.disabled = false;
+                if (ideaTypeSelect) ideaTypeSelect.disabled = false;
+                if (ideaDomainSelect) ideaDomainSelect.disabled = false;
+                if (ideaTimeSelect) ideaTimeSelect.disabled = false;
+                if (ideaTechTags) {
+                    ideaTechTags.style.opacity = '1';
+                    ideaTechTags.style.pointerEvents = 'auto';
+                }
+                document.querySelectorAll('.tech-preset-btn, .tech-chip-quick').forEach(b => {
+                    b.style.pointerEvents = 'auto';
+                    b.style.opacity = '1';
+                });
 
             }
         });
@@ -3714,25 +3788,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Auto-detect profile from target input format
-    
-    const secProfileHint = document.getElementById('sec-profile-hint');
-    const PROFILE_HINT_MAP = {
-        'web_baseline': 'Passive Headers, SSL/TLS, Clickjacking & Cookie Audit',
-        'dependency_audit': 'OSV Known Vulnerabilities in Python/JS/Go lockfiles & dependencies',
-        'service_inventory': 'Nmap port scan & service banner version enumeration',
-        'asset_discovery': 'Local subnet host ping sweep & active device discovery',
-        'infrastructure_assessment': 'System configuration, exposure checks & safe baseline audit',
-        'comprehensive': 'Full-scope multi-engine correlated vulnerability analysis'
-    };
-    function updateSecProfileHint() {
-        if (secProfileHint && secProfileSelect) {
-            secProfileHint.innerText = PROFILE_HINT_MAP[secProfileSelect.value] || '';
-        }
-    }
-    if (secProfileSelect) {
-        secProfileSelect.addEventListener('change', updateSecProfileHint);
-    }
-
+    
+    const secProfileHint = document.getElementById('sec-profile-hint');
+    const PROFILE_HINT_MAP = {
+        'web_baseline': 'Passive Headers, SSL/TLS, Clickjacking & Cookie Audit',
+        'dependency_audit': 'OSV Known Vulnerabilities in Python/JS/Go lockfiles & dependencies',
+        'service_inventory': 'Nmap port scan & service banner version enumeration',
+        'asset_discovery': 'Local subnet host ping sweep & active device discovery',
+        'infrastructure_assessment': 'System configuration, exposure checks & safe baseline audit',
+        'comprehensive': 'Full-scope multi-engine correlated vulnerability analysis'
+    };
+    function updateSecProfileHint() {
+        if (secProfileHint && secProfileSelect) {
+            secProfileHint.innerText = PROFILE_HINT_MAP[secProfileSelect.value] || '';
+        }
+    }
+    if (secProfileSelect) {
+        secProfileSelect.addEventListener('change', updateSecProfileHint);
+    }
+
     const secTargetInput = document.getElementById('sec-input-target');
     const secProfileSelect = document.getElementById('sec-select-profile');
     if (secTargetInput && secProfileSelect) {

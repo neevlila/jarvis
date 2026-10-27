@@ -1943,3 +1943,24 @@ body::before {
     }
 }
 
+/* Defensive Security Assessment Engine Profile Select Styling */
+#sec-select-profile {
+    background-color: #07131e !important;
+    color: #00d2ff !important;
+    border: 1px solid rgba(0, 210, 255, 0.45) !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#sec-select-profile:hover,
+#sec-select-profile:focus {
+    border-color: #00d2ff !important;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3) !important;
+}
+#sec-select-profile option {
+    background-color: #081420;
+    color: #c9e8fb;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+}
+
+
