@@ -32,5 +32,21 @@ jobs:
           pip install pytest
 
       - name: Run Pytest Suite
+        id: run_tests
         run: |
-          python -m pytest tests/ -v --tb=short -ra
+          python -m pytest tests/ -v --tb=short | tee test_log.txt
+        continue-on-error: true
+
+      - name: Summary & Gate
+        if: always()
+        run: |
+          echo "### Pytest Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -A 40 "FAILURES" test_log.txt >> $GITHUB_STEP_SUMMARY || true
+          grep -A 40 "ERRORS" test_log.txt >> $GITHUB_STEP_SUMMARY || true
+          tail -n 30 test_log.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.run_tests.outcome }}" != "success" ]; then
+            echo "Pytest failed!"
+            exit 1
+          fi
