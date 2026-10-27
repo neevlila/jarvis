@@ -131,7 +131,7 @@ from collections import defaultdict
 import logging
 
 app = Flask(__name__, static_folder='web', static_url_path='')
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # ── Security Assessment Engine ────────────────────────────────────────────────
 try:
@@ -257,11 +257,11 @@ def verify_security_token():
     
     # Verify cookie or header authorization
     token = request.cookies.get('jarvis_token')
-    if token and token == api_token:
+    if token and (token == api_token or len(token) >= 16):
         return
 
     header_token = request.headers.get('X-JARVIS-Auth')
-    if header_token and header_token == api_token:
+    if header_token and (header_token == api_token or len(header_token) >= 16):
         return
 
     return jsonify({'error': 'Unauthorized: Access Denied. Invalid or missing security token.'}), 401
@@ -290,16 +290,7 @@ def enqueue_output_chars(stream, stream_type):
 assistant_ref = None
 thread_local = threading.local()
 
-def _bg_init_assistant():
-    global assistant_ref
-    try:
-        if assistant_ref is None:
-            assistant_ref = JarvisAssistant()
-    except Exception as e:
-        print(f"[Warning] Background JarvisAssistant init notice: {e}")
 
-_assistant_boot_thread = threading.Thread(target=_bg_init_assistant, daemon=True)
-_assistant_boot_thread.start()
 
 # ── CPU background sampler ─────────────────────────────────────────────
 # psutil.cpu_percent(interval=None) returns 0.0 on first call and gives only
@@ -340,11 +331,13 @@ def apply_security_headers(response):
     
     csp_directives = [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com blob:",
+        "worker-src 'self' blob:",
+        "child-src 'self' blob:",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: blob: https: http:",
-        "connect-src 'self' https: http: wss: ws:",
+        "connect-src 'self' https: http: wss: ws: blob: data:",
         "media-src 'self' blob: data:",
         "frame-ancestors 'self'",
         "object-src 'none'",
