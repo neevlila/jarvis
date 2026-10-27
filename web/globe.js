@@ -23,7 +23,7 @@
 
             this.options = Object.assign({
                 radius: 3.85,
-                cameraDistance: 13.0,
+                cameraDistance: 14.0,
                 focusDistance: 4.8,
                 ambientSpeed: 0.0016,
                 targetZoom: 8.8,
@@ -185,27 +185,29 @@
             this.ringsGroup = new THREE.Group();
             this.scene.add(this.ringsGroup);
 
-            // Orbit Ring 1 (Horizontal)
-            const ring1Geo = new THREE.RingGeometry(this.options.radius * 1.35, this.options.radius * 1.365, 64);
+            // Orbit Ring 1 (Equatorial / Primary Orbit - Cyan)
+            const ring1Geo = new THREE.RingGeometry(this.options.radius * 1.20, this.options.radius * 1.235, 96);
             ring1Geo.rotateX(Math.PI / 2);
             const ring1Mat = new THREE.MeshBasicMaterial({
                 color: 0x00d2ff,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.18
+                opacity: 0.45,
+                depthWrite: false
             });
             const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
             this.ringsGroup.add(ring1);
 
-            // Orbit Ring 2 (Tilted)
-            const ring2Geo = new THREE.RingGeometry(this.options.radius * 1.5, this.options.radius * 1.515, 64);
-            ring2Geo.rotateX(Math.PI / 3);
-            ring2Geo.rotateY(Math.PI / 6);
+            // Orbit Ring 2 (Tilted Polar Orbit - Neon Emerald / Teal)
+            const ring2Geo = new THREE.RingGeometry(this.options.radius * 1.30, this.options.radius * 1.335, 96);
+            ring2Geo.rotateX(Math.PI / 2.8);
+            ring2Geo.rotateY(Math.PI / 4.5);
             const ring2Mat = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
+                color: 0x00ffcc,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.12
+                opacity: 0.40,
+                depthWrite: false
             });
             const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
             this.ringsGroup.add(ring2);

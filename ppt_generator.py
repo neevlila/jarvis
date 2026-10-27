@@ -689,7 +689,7 @@ def _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
 
         for p_i, text_line in enumerate(items[:6]):
             cp = ctf.paragraphs[0] if p_i == 0 else ctf.add_paragraph()
-            clean_text = str(text_line).strip().lstrip('•-* ').strip()
+            clean_text = str(text_line).strip().lstrip('•-* 	').strip()
             cp.text = f'•  {clean_text}'
             cp.font.name = body_font
             cp.font.size = Pt(16)
@@ -718,6 +718,9 @@ def _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
     fp2.font.color.rgb = accent_color
     fp2.space_before = Pt(12)
 
+    out_dir = os.path.dirname(os.path.abspath(out_path))
+    if out_dir and not os.path.exists(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
     prs.save(out_path)
     return True
 
@@ -1085,11 +1088,12 @@ def generate_ppt_custom(topic, slide_count, slide_titles=None, theme=None, exist
         slides_data = get_fallback_slide_deck(topic, content_slide_count, titles, contents)
         
     base_name = _sanitize_filename(topic)
-    out_path = os.path.join(os.getcwd(), f"{base_name}.pptx")
+    workspace_dir = os.path.abspath(os.path.dirname(__file__))
+    out_path = os.path.join(workspace_dir, f"{base_name}.pptx")
     if os.path.exists(out_path):
         suffix = 1
         while True:
-            candidate = os.path.join(os.getcwd(), f"{base_name}_{suffix}.pptx")
+            candidate = os.path.join(workspace_dir, f"{base_name}_{suffix}.pptx")
             if not os.path.exists(candidate):
                 out_path = candidate
                 break
@@ -1104,13 +1108,19 @@ def generate_ppt_custom(topic, slide_count, slide_titles=None, theme=None, exist
         }
 
     # 1. Try python-pptx (pure Python, cross-platform, Linux/Render compatible)
+    pptx_err = None
     try:
         print("Attempting slide generation via python-pptx engine...")
         if _compile_ppt_via_python_pptx(topic, slides_data, theme, out_path):
             print(f"Presentation successfully compiled via python-pptx: {out_path}")
             return out_path
+        else:
+            pptx_err = "python-pptx library not found in environment (ImportError)"
     except Exception as e:
-        print(f"python-pptx engine notice: {e}")
+        import traceback
+        traceback.print_exc()
+        pptx_err = f"{type(e).__name__}: {str(e)}"
+        print(f"python-pptx engine notice: {pptx_err}")
 
     # 2. Try HTML Slide Compiler
     try:
@@ -1126,7 +1136,8 @@ def generate_ppt_custom(topic, slide_count, slide_titles=None, theme=None, exist
     if win32 is not None and hasattr(win32, 'Dispatch'):
         app = win32.Dispatch("PowerPoint.Application")
     else:
-        raise RuntimeError("PowerPoint generation requires python-pptx on Linux/Render or Microsoft PowerPoint on Windows.")
+        diag = f" Reason: {pptx_err}" if pptx_err else ""
+        raise RuntimeError(f"PowerPoint generation requires python-pptx on Linux/Render or Microsoft PowerPoint on Windows.{diag}")
     app.Visible = True
         
     primary_color = _hex_to_rgb(theme["text"]["primary"])

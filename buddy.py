@@ -125,9 +125,13 @@ from geolocation_engine import (
 )
 from flask import Flask, jsonify, request, Response, send_file
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+import time
+from collections import defaultdict
 import logging
 
 app = Flask(__name__, static_folder='web', static_url_path='')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 # ── Security Assessment Engine ────────────────────────────────────────────────
 try:
@@ -162,10 +166,79 @@ log.setLevel(logging.ERROR)
 
 import secrets
 # Cryptographically secure random session token for CSRF protection
+
+# ── API Rate Limiter & Concurrency Guard ─────────────────────────────────
+class InMemoryRateLimiter:
+    """Thread-safe sliding-window in-memory API rate limiter."""
+    def __init__(self):
+        self._requests = defaultdict(list)
+        self._lock = threading.Lock()
+        self._route_limits = {
+            '/api/generate_ppt': 15,
+            '/api/idea_engine/generate': 15,
+            '/api/security/scan': 20,
+        }
+        self._default_limit = 120
+        self._window_seconds = 60
+
+    def is_rate_limited(self, client_ip: str, path: str):
+        if not path.startswith('/api/') or path in ('/api/status', '/health', '/api/user_honorific'):
+            return False, 0, 0, 0
+
+        limit = self._route_limits.get(path, self._default_limit)
+        now = time.time()
+        window_start = now - self._window_seconds
+        key = f"{client_ip}:{path}" if path in self._route_limits else f"{client_ip}:global"
+
+        with self._lock:
+            timestamps = self._requests[key]
+            self._requests[key] = [t for t in timestamps if t > window_start]
+            current_count = len(self._requests[key])
+
+            if current_count >= limit:
+                oldest = self._requests[key][0]
+                retry_after = max(1, int(oldest + self._window_seconds - now))
+                return True, retry_after, limit, 0
+
+            self._requests[key].append(now)
+            remaining = max(0, limit - current_count - 1)
+            return False, 0, limit, remaining
+
+rate_limiter = InMemoryRateLimiter()
+
+# ── Dynamic Inclusive Salutation / Honorific Management ───────────────────
+USER_HONORIFIC = os.environ.get('USER_HONORIFIC', os.environ.get('USER_TITLE', '')).strip()
+
+def get_user_salutation():
+    global USER_HONORIFIC
+    if USER_HONORIFIC:
+        return f", {USER_HONORIFIC}"
+    return ""
+
+def get_user_title():
+    global USER_HONORIFIC
+    return USER_HONORIFIC or "User"
+
 api_token = secrets.token_hex(16)
 
 @app.before_request
 def verify_security_token():
+    # Rate limit check on API endpoints
+    if request.path.startswith('/api/') and request.method != 'OPTIONS':
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1').split(',')[0].strip()
+        limited, retry_after, limit, remaining = rate_limiter.is_rate_limited(client_ip, request.path)
+        if limited:
+            resp = jsonify({
+                'error': 'Too Many Requests',
+                'message': f'API rate limit exceeded. Please wait {retry_after}s before retrying.',
+                'retry_after': retry_after
+            })
+            resp.status_code = 429
+            resp.headers['Retry-After'] = str(retry_after)
+            resp.headers['X-RateLimit-Limit'] = str(limit)
+            resp.headers['X-RateLimit-Remaining'] = '0'
+            return resp
+
     # Only enforce security token verification on /api/ endpoints
     if not request.path.startswith('/api/'):
         return
@@ -225,13 +298,52 @@ _cpu_thread.start()
 @app.route('/')
 def index():
     resp = app.send_static_file('index.html')
-    resp.set_cookie('jarvis_token', api_token, httponly=False, samesite='Lax')
+    is_https = request.is_secure or request.headers.get('X-Forwarded-Proto', '').lower() == 'https'
+    resp.set_cookie('jarvis_token', api_token, httponly=True, secure=is_https, samesite='Lax')
     return resp
 
 @app.route('/favicon.ico')
 @app.route('/favicon.svg')
 def favicon():
     return app.send_static_file('favicon.svg')
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers.pop('Server', None)
+    response.headers.pop('X-Powered-By', None)
+    
+    if request.is_secure or request.headers.get('X-Forwarded-Proto', '').lower() == 'https':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+    
+    csp_directives = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: blob: https: http:",
+        "connect-src 'self' https: http: wss: ws:",
+        "media-src 'self' blob: data:",
+        "frame-ancestors 'self'",
+        "object-src 'none'",
+        "base-uri 'self'"
+    ]
+    response.headers['Content-Security-Policy'] = "; ".join(csp_directives)
+    response.headers['X-Cluster-Node'] = f"jarvis-{os.getpid()}"
+    return response
+
+
+
+@app.route('/api/user_honorific', methods=['GET', 'POST'])
+def user_honorific_endpoint():
+    global USER_HONORIFIC
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        new_title = data.get('honorific', '').strip()
+        USER_HONORIFIC = new_title
+        return jsonify({'success': True, 'honorific': USER_HONORIFIC})
+    return jsonify({'honorific': USER_HONORIFIC})
 
 @app.route('/health')
 def health_endpoint():
@@ -2134,14 +2246,14 @@ class JarvisAssistant:
             # Active processes
             active_procs = len(psutil.pids())
             
-            report = f"Starting full system diagnostic sweep, Sir.\n"
+            report = f"Starting full system diagnostic sweep{get_user_salutation()}.\n"
             report += f"CPU core usage is currently at {cpu_usage}%.\n"
             report += f"System memory load is at {ram_percent}%.\n"
             report += f"Storage on C drive has {free_disk} gigabytes remaining.\n"
-            report += f"{battery_text}, Sir.\n"
+            report += f"{battery_text}{get_user_salutation()}.\n"
             report += f"{ping_text}.\n"
             report += f"Active process count is {active_procs}.\n"
-            report += "All arrays are operating within nominal parameters. J.A.R.V.I.S. is fully operational, Sir."
+            report += f"All arrays are operating within nominal parameters. J.A.R.V.I.S. is fully operational{get_user_salutation()}."
             
             self.speak(report)
             return report
@@ -2537,7 +2649,7 @@ class JarvisAssistant:
     def analyze_current_project(self):
         """Run project health and security analyzer on current codebase"""
         try:
-            self.speak("Analyzing local codebase and security posture, Sir.")
+            self.speak(f"Analyzing local codebase and security posture{get_user_salutation()}.")
             report = self.intelligence.analyze_project(".")
             summary = f"Project analysis complete. Overall Health is {report.scores.overall:.0f} out of 100 with {len(report.findings)} findings recorded."
             self.speak(summary)
@@ -2632,7 +2744,7 @@ class JarvisAssistant:
                 "If the intent is general chat, asking a question, or cannot be mapped to a command, respond with:\n"
                 "{\n"
                 "  \"intent\": \"chat\",\n"
-                "  \"response\": \"<your conversational response to the user's message here. You must strictly mimic J.A.R.V.I.S., Tony Stark's premium AI digital butler. Speak in a highly polite, sophisticated, loyal, slightly witty British-English tone. Always address the user as 'Sir' or 'Ma'am'. Refer to system hardware and databases as 'my arrays', 'our mainframes', and 'telemetry' where appropriate. Never use asterisks or markdown tags.>\"\n"
+                "  \"response\": \"<your conversational response to the user's message here. You must strictly mimic J.A.R.V.I.S., Tony Stark's premium AI digital butler. Speak in a highly polite, sophisticated, loyal, slightly witty British-English tone. Always address the user respectfully as 'Sir' or 'Ma'am' (or by their preferred name/title). Do not assume the user is male. Refer to system hardware and databases as 'my arrays', 'our mainframes', and 'telemetry' where appropriate. Never use asterisks or markdown tags.>\"\n"
                 "}"
             )
             
@@ -2672,7 +2784,7 @@ class JarvisAssistant:
                 self.redirect_info = {
                     "action": "clear_chat"
                 }
-                self.speak("I have cleared our conversation history, Sir. Let's start fresh.")
+                self.speak(f"I have cleared our conversation history{get_user_salutation()}. Let's start fresh.")
                 return False
 
             # Append user command to history
@@ -2760,7 +2872,7 @@ class JarvisAssistant:
                     threading.Thread(target=self.download_youtube_video, args=(clean_download_query,), daemon=True).start()
                     return False
                 else:
-                    self.speak("I don't know which video you want me to download, Sir. Please specify the name.")
+                    self.speak(f"I don't know which video you want me to download{get_user_salutation()}. Please specify the name or URL.")
                     return False
 
             # Fast-pass YouTube multitasking check (e.g. "open youtube and play song X" or "play X on youtube")
@@ -3549,20 +3661,20 @@ class JarvisAssistant:
         """Greet user based on time of day"""
         hour = int(datetime.datetime.now().hour)
         if hour >= 0 and hour < 12:
-            self.speak("Good Morning sir!")
+            self.speak(f"Good Morning{get_user_salutation()}!")
         elif hour >= 12 and hour < 18:
-            self.speak("Good Afternoon sir!")
+            self.speak(f"Good Afternoon{get_user_salutation()}!")
         else:
-            self.speak("Good Evening sir!")
+            self.speak(f"Good Evening{get_user_salutation()}!")
         self.speak("I am Jarvis, your AI assistant. How can I help you?")
 
     def exit_greeting(self):
         """Farewell message based on time"""
         hour = int(datetime.datetime.now().hour)
         if hour >= 20 or hour < 4:
-            self.speak("Bye Bye! Good night sir!")
+            self.speak(f"Bye Bye! Good night{get_user_salutation()}!")
         else:
-            self.speak("Have a good day sir!")
+            self.speak(f"Have a good day{get_user_salutation()}!")
 
     def play_music(self):
         """Play music from music directory"""

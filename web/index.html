@@ -64,44 +64,8 @@
                     Security Engine
                 </button>
 
-            </nav>
-
-            <!-- Tactical Protocols HUD (Replaces Resource Hardware Meters) -->
-            <div class="system-protocols" style="display: flex; flex-direction: column; gap: 14px; background: rgba(0, 20, 30, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-top: auto;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0, 210, 255, 0.15); padding-bottom: 8px;">
-                    <span style="font-size: 0.7rem; letter-spacing: 1.5px; color: var(--accent-color); font-weight: bold; font-family: var(--font-mono);">TACTICAL PROTOCOLS</span>
-                    <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--success-color); box-shadow: 0 0 8px var(--success-color);"></span>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.72rem; font-family: var(--font-mono);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">DEFCON STATUS</span>
-                        <span style="color: var(--success-color); font-weight: bold;">LEVEL 5 // NOMINAL</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">NEURAL CORE</span>
-                        <span style="color: var(--accent-color);">GEMINI 2.5 FLASH</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">CIPHER ENCRYPTION</span>
-                        <span style="color: var(--accent-color);">AES-256-GCM</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">VOICE RECOGNITION</span>
-                        <span style="color: var(--success-color);" id="sidebar-voice-status">ONLINE // READY</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">SATELLITE RECON</span>
-                        <span style="color: var(--accent-color);">GEO-TACTICAL 3D</span>
-                    </div>
-                </div>
-
-                <button id="btn-diagnostics" style="margin-top: 6px; width: 100%; font-size: 0.7rem; letter-spacing: 1.5px; border-radius: 6px; padding: 9px; background: rgba(0, 210, 255, 0.08); border: 1px dashed var(--accent-color); color: var(--accent-color); font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; outline: none;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-activity"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                    RUN DIAGNOSTICS
-                </button>
-            </div>
-        </aside>
+            </nav>
+                </aside>
 
         <!-- Main Workspace -->
         <main class="main-content">
@@ -730,14 +694,15 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div>
                                     <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">ASSESSMENT PROFILE</label>
-                                    <select id="sec-select-profile" style="width: 100%; box-sizing: border-box; background: rgba(0,20,30,0.8); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-family: var(--font-sans); font-size: 0.8rem; outline: none;">
-                                        <option value="web_baseline">Web Baseline (Passive Headers, SSL/TLS, Clickjacking, Cookies - Cloud)</option>
-                                        <option value="dependency_audit">Dependency Audit (OSV Known Vulnerabilities - Repos / Lockfiles)</option>
-                                        <option value="service_inventory">Service Inventory (Nmap Port &amp; Version - Local Agent)</option>
-                                        <option value="asset_discovery">Asset Discovery (Nmap Host Ping Sweep - Local Agent)</option>
-                                        <option value="infrastructure_assessment">Infrastructure Assessment (Controlled Checks)</option>
-                                        <option value="comprehensive">Comprehensive Assessment (Bounded Multi-Tool)</option>
-                                    </select>
+                                    <select id="sec-select-profile" style="width: 100%; box-sizing: border-box; background: rgba(0,20,30,0.85); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-family: var(--font-sans); font-size: 0.8rem; outline: none; cursor: pointer;">
+                                        <option value="web_baseline">Web Baseline (Headers, SSL, Cookies)</option>
+                                        <option value="dependency_audit">Dependency Audit (OSV / Lockfiles)</option>
+                                        <option value="service_inventory">Service Inventory (Port &amp; Version)</option>
+                                        <option value="asset_discovery">Asset Discovery (Host Ping Sweep)</option>
+                                        <option value="infrastructure_assessment">Infrastructure Assessment (Controlled)</option>
+                                        <option value="comprehensive">Comprehensive Assessment (Multi-Tool)</option>
+                                    </select>
+                                    <div id="sec-profile-hint" style="font-size: 0.65rem; color: var(--accent-color); font-family: var(--font-mono); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Passive Headers, SSL/TLS, Clickjacking &amp; Cookie Audit</div>
                                 </div>
                                 <div>
                                     <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 5px;">SCOPE OWNER / OPERATOR IDENTITY</label>
